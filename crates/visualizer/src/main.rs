@@ -34,7 +34,11 @@ impl SimulationVisualizer {
 }
 
 impl EventHandler for SimulationVisualizer {
-    fn update(&mut self, _ctx: &mut Context) -> GameResult {
+    fn update(&mut self, ctx: &mut Context) -> GameResult {
+        while ctx.time.check_update_time(60) {
+            self.simulation.step();
+        }
+
         Ok(())
     }
 

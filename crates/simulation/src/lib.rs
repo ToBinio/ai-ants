@@ -1,4 +1,5 @@
 use crate::ant::Ant;
+use std::ops::{Add, Mul};
 
 mod ant;
 pub struct Simulation {
@@ -18,5 +19,11 @@ impl Simulation {
 
     pub fn ants(&self) -> &Vec<Ant> {
         &self.ants
+    }
+
+    pub fn step(&mut self) {
+        for ant in &mut self.ants {
+            ant.step()
+        }
     }
 }
