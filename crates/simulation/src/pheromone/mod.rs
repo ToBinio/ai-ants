@@ -1,5 +1,5 @@
-use glam::{vec2, Vec2};
-use rand::thread_rng;
+use glam::Vec2;
+
 use std::f32::consts::PI;
 
 pub struct Pheromone {
@@ -11,12 +11,12 @@ pub struct Pheromone {
 
 impl Pheromone {
     pub fn new(pos: Vec2, strength: f32) -> Pheromone {
-        return Pheromone {
+        Pheromone {
             pos,
             size: 1.0,
             strength,
             color: (0.8, 0., 1.),
-        };
+        }
     }
 
     pub fn should_be_removed(&self) -> bool {

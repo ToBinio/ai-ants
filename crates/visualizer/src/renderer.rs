@@ -1,6 +1,6 @@
-use crate::Timings;
+use crate::{RenderState, Timings};
 use ggez::glam::vec2;
-use ggez::graphics::{Canvas, Color, DrawParam, Drawable, Mesh, Text, TextFragment};
+use ggez::graphics::{Canvas, Color, DrawParam, Mesh, Text, TextFragment};
 use ggez::{graphics, Context, GameError, GameResult};
 use simulation::Simulation;
 
@@ -40,12 +40,19 @@ impl Renderer {
         &mut self,
         simulation: &Simulation,
         timings: &Timings,
+        render_state: &RenderState,
         canvas: &mut Canvas,
         ctx: &mut Context,
     ) -> GameResult {
-        self.draw_pheromones(simulation, canvas);
+        if render_state.draw_pheromones {
+            self.draw_pheromones(simulation, canvas);
+        }
+
         self.draw_ants(simulation, canvas);
-        self.draw_timings(simulation, timings, canvas, ctx);
+
+        if render_state.draw_timings {
+            self.draw_timings(simulation, timings, canvas, ctx);
+        }
 
         Ok(())
     }
@@ -86,7 +93,8 @@ impl Renderer {
         ctx: &mut Context,
     ) {
         let text = format!(
-            "fps: {}
+            "Stats:
+fps: {}
 render time: {:?} 
 update time: {:?}
     ant update time: {:?}

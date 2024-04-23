@@ -55,6 +55,6 @@ impl Ant {
 
     pub fn new_pheromone(&self) -> Pheromone {
         //todo strength from ai
-        Pheromone::new(self.pos.clone(), 5.)
+        Pheromone::new(self.pos, 5.)
     }
 }

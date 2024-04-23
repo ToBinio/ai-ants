@@ -1,8 +1,7 @@
 use crate::ant::Ant;
 use crate::pheromone::Pheromone;
-use itertools::Itertools;
 use rayon::prelude::*;
-use std::ops::{Add, Mul};
+
 use std::time::{Duration, Instant};
 
 mod ant;
@@ -23,11 +22,11 @@ pub struct Timings {
     pub pheromone_remove: Duration,
 }
 
-impl Simulation {
-    pub fn new() -> Simulation {
+impl Default for Simulation {
+    fn default() -> Self {
         let mut ants = vec![];
 
-        for _ in 0..1000 {
+        for _ in 0..100 {
             ants.push(Ant::random());
         }
 
@@ -43,7 +42,9 @@ impl Simulation {
             },
         }
     }
+}
 
+impl Simulation {
     pub fn timings(&self) -> &Timings {
         &self.timings
     }
