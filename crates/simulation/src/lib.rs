@@ -1,29 +1,88 @@
 use crate::ant::Ant;
+use crate::pheromone::Pheromone;
+use itertools::Itertools;
+use rayon::prelude::*;
 use std::ops::{Add, Mul};
+use std::time::{Duration, Instant};
 
 mod ant;
+mod pheromone;
+
+const TICKS_UNTIL_PHEROMONE: usize = 10;
 pub struct Simulation {
     ants: Vec<Ant>,
+    pheromones: Vec<Pheromone>,
+    ticks_until_pheromone: usize,
+    timings: Timings,
+}
+
+pub struct Timings {
+    pub ant_updates: Duration,
+    pub pheromone_updates: Duration,
+    pub pheromone_spawn: Duration,
+    pub pheromone_remove: Duration,
 }
 
 impl Simulation {
     pub fn new() -> Simulation {
         let mut ants = vec![];
 
-        for _ in 0..10 {
+        for _ in 0..1000 {
             ants.push(Ant::random());
         }
 
-        Simulation { ants }
+        Simulation {
+            ants,
+            pheromones: vec![],
+            ticks_until_pheromone: TICKS_UNTIL_PHEROMONE,
+            timings: Timings {
+                ant_updates: Default::default(),
+                pheromone_updates: Default::default(),
+                pheromone_spawn: Default::default(),
+                pheromone_remove: Default::default(),
+            },
+        }
+    }
+
+    pub fn timings(&self) -> &Timings {
+        &self.timings
     }
 
     pub fn ants(&self) -> &Vec<Ant> {
         &self.ants
     }
 
+    pub fn pheromones(&self) -> &Vec<Pheromone> {
+        &self.pheromones
+    }
+
     pub fn step(&mut self) {
-        for ant in &mut self.ants {
-            ant.step()
+        let instant = Instant::now();
+        self.ants.par_iter_mut().for_each(|ant| ant.step());
+        self.timings.ant_updates = instant.elapsed();
+
+        if self.ticks_until_pheromone == 0 {
+            let instant = Instant::now();
+            self.ticks_until_pheromone = TICKS_UNTIL_PHEROMONE;
+
+            self.pheromones.reserve(self.ants.len());
+            for ant in &mut self.ants {
+                self.pheromones.push(ant.new_pheromone())
+            }
+            self.timings.pheromone_spawn = instant.elapsed();
+        } else {
+            self.ticks_until_pheromone -= 1;
         }
+
+        let instant = Instant::now();
+        self.pheromones
+            .par_iter_mut()
+            .for_each(|pheromone| pheromone.step());
+        self.timings.pheromone_updates = instant.elapsed();
+
+        let instant = Instant::now();
+        self.pheromones
+            .retain(|pheromone| !pheromone.should_be_removed());
+        self.timings.pheromone_remove = instant.elapsed();
     }
 }

@@ -1,3 +1,4 @@
+use crate::pheromone::Pheromone;
 use glam::{vec2, Vec2};
 use rand::{thread_rng, Rng};
 use std::f32::consts::PI;
@@ -50,5 +51,10 @@ impl Ant {
         let mov_speed = mov_speed / 60.;
 
         self.pos += Vec2::from_angle(self.dir) * mov_speed
+    }
+
+    pub fn new_pheromone(&self) -> Pheromone {
+        //todo strength from ai
+        Pheromone::new(self.pos.clone(), 5.)
     }
 }

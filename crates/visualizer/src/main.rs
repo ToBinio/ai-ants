@@ -5,6 +5,7 @@ use ggez::glam::{vec2, Vec2};
 use ggez::graphics::{self, Color, Rect};
 use ggez::{Context, ContextBuilder, GameError, GameResult};
 use simulation::Simulation;
+use std::time::{Duration, Instant};
 
 mod renderer;
 
@@ -22,6 +23,12 @@ fn main() {
 struct SimulationVisualizer {
     simulation: Simulation,
     renderer: Renderer,
+    timings: Timings,
+}
+
+struct Timings {
+    render: Duration,
+    update: Duration,
 }
 
 impl SimulationVisualizer {
@@ -29,20 +36,30 @@ impl SimulationVisualizer {
         Ok(SimulationVisualizer {
             simulation: Simulation::new(),
             renderer: Renderer::new(ctx)?,
+            timings: Timings {
+                render: Default::default(),
+                update: Default::default(),
+            },
         })
     }
 }
 
 impl EventHandler for SimulationVisualizer {
     fn update(&mut self, ctx: &mut Context) -> GameResult {
+        let instant = Instant::now();
+
         while ctx.time.check_update_time(60) {
             self.simulation.step();
         }
+
+        self.timings.update = instant.elapsed();
 
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult {
+        let instant = Instant::now();
+
         let mut canvas = graphics::Canvas::from_frame(ctx, Color::WHITE);
         let screen_size = ctx.gfx.size();
         canvas.set_screen_coordinates(Rect::new(
@@ -52,8 +69,12 @@ impl EventHandler for SimulationVisualizer {
             screen_size.1,
         ));
 
-        self.renderer.draw(&self.simulation, &mut canvas, ctx)?;
+        self.renderer
+            .draw(&self.simulation, &self.timings, &mut canvas, ctx)?;
 
-        canvas.finish(ctx)
+        canvas.finish(ctx)?;
+        self.timings.render = instant.elapsed();
+
+        Ok(())
     }
 }
