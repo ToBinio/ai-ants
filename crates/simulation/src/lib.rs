@@ -2,15 +2,21 @@ use crate::ant::Ant;
 use crate::pheromone::Pheromone;
 use rayon::prelude::*;
 
+use crate::food::Food;
+use glam::vec2;
+use rand::{thread_rng, Rng};
 use std::time::{Duration, Instant};
 
 mod ant;
+mod food;
 mod pheromone;
 
 const TICKS_UNTIL_PHEROMONE: usize = 10;
 pub struct Simulation {
     ants: Vec<Ant>,
     pheromones: Vec<Pheromone>,
+    foods: Vec<Food>,
+
     ticks_until_pheromone: usize,
     timings: Timings,
 }
@@ -30,9 +36,20 @@ impl Default for Simulation {
             ants.push(Ant::random());
         }
 
+        let mut foods = vec![];
+        let mut rng = thread_rng();
+
+        for _ in 0..100 {
+            foods.push(Food::new(vec2(
+                rng.gen_range(100.0..200.0),
+                rng.gen_range(100.0..200.0),
+            )))
+        }
+
         Simulation {
             ants,
             pheromones: vec![],
+            foods,
             ticks_until_pheromone: TICKS_UNTIL_PHEROMONE,
             timings: Timings {
                 ant_updates: Default::default(),
@@ -55,6 +72,9 @@ impl Simulation {
 
     pub fn pheromones(&self) -> &Vec<Pheromone> {
         &self.pheromones
+    }
+    pub fn foods(&self) -> &Vec<Food> {
+        &self.foods
     }
 
     pub fn step(&mut self) {

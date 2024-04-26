@@ -1,12 +1,13 @@
 use crate::{RenderState, Timings};
 use ggez::glam::vec2;
-use ggez::graphics::{Canvas, Color, DrawParam, Mesh, Text, TextFragment};
+use ggez::graphics::{Canvas, Color, DrawParam, InstanceArray, Mesh, Text, TextFragment};
 use ggez::{graphics, Context, GameError, GameResult};
 use simulation::Simulation;
 
 pub struct Renderer {
     ant_mesh: Mesh,
     pheromone_mesh: Mesh,
+    food_mesh: Mesh,
 }
 
 impl Renderer {
@@ -18,7 +19,7 @@ impl Renderer {
             10.0,
             5.0,
             0.1,
-            Color::BLACK,
+            Color::WHITE,
         )?;
 
         let pheromone_mesh = Mesh::new_circle(
@@ -30,9 +31,19 @@ impl Renderer {
             Color::WHITE,
         )?;
 
+        let food_mesh = Mesh::new_circle(
+            ctx,
+            graphics::DrawMode::fill(),
+            vec2(0., 0.),
+            3.0,
+            0.1,
+            Color::WHITE,
+        )?;
+
         Ok(Renderer {
             ant_mesh,
             pheromone_mesh,
+            food_mesh,
         })
     }
 
@@ -45,10 +56,11 @@ impl Renderer {
         ctx: &mut Context,
     ) -> GameResult {
         if render_state.draw_pheromones {
-            self.draw_pheromones(simulation, canvas);
+            self.draw_pheromones(simulation, canvas, ctx);
         }
 
-        self.draw_ants(simulation, canvas);
+        self.draw_ants(simulation, canvas, ctx);
+        self.draw_food(simulation, canvas, ctx);
 
         if render_state.draw_timings {
             self.draw_timings(simulation, timings, canvas, ctx);
@@ -56,33 +68,64 @@ impl Renderer {
 
         Ok(())
     }
-    fn draw_ants(&self, simulation: &Simulation, canvas: &mut Canvas) {
+    fn draw_ants(&self, simulation: &Simulation, canvas: &mut Canvas, ctx: &mut Context) {
+        let mut instances = InstanceArray::new(&ctx.gfx, None);
+
         for ant in simulation.ants() {
             let angle = ant.dir();
             let pos = ant.pos();
 
-            canvas.draw(
-                &self.ant_mesh,
-                DrawParam::new().dest(vec2(pos.x, pos.y)).rotation(angle),
+            let color = if ant.carries_food() {
+                Color::GREEN
+            } else {
+                Color::BLACK
+            };
+
+            instances.push(
+                DrawParam::new()
+                    .dest(vec2(pos.x, pos.y))
+                    .rotation(angle)
+                    .color(color),
             );
         }
+
+        canvas.draw_instanced_mesh(self.ant_mesh.clone(), &instances, DrawParam::new());
     }
 
-    fn draw_pheromones(&self, simulation: &Simulation, canvas: &mut Canvas) {
+    fn draw_pheromones(&self, simulation: &Simulation, canvas: &mut Canvas, ctx: &mut Context) {
+        let mut instances = InstanceArray::new(&ctx.gfx, None);
+
         for pheromone in simulation.pheromones() {
             let pos = pheromone.pos();
             let scale = pheromone.size();
             let color = pheromone.color();
             let density = pheromone.density();
 
-            canvas.draw(
-                &self.pheromone_mesh,
+            instances.push(
                 DrawParam::new()
                     .dest(vec2(pos.x, pos.y))
                     .scale(vec2(scale, scale))
                     .color(Color::new(color.0, color.1, color.2, density)),
             );
         }
+
+        canvas.draw_instanced_mesh(self.pheromone_mesh.clone(), &instances, DrawParam::new());
+    }
+
+    fn draw_food(&self, simulation: &Simulation, canvas: &mut Canvas, ctx: &mut Context) {
+        let mut instances = InstanceArray::new(&ctx.gfx, None);
+
+        for food in simulation.foods() {
+            let pos = food.pos();
+
+            instances.push(
+                DrawParam::new()
+                    .dest(vec2(pos.x, pos.y))
+                    .color(Color::GREEN),
+            );
+        }
+
+        canvas.draw_instanced_mesh(self.food_mesh.clone(), &instances, DrawParam::new());
     }
 
     fn draw_timings(

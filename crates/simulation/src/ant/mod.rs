@@ -9,6 +9,8 @@ pub struct Ant {
     pos: Vec2,
     dir: f32,
     target_dir: f32,
+
+    carries_food: bool,
 }
 
 impl Ant {
@@ -19,6 +21,7 @@ impl Ant {
             pos: vec2(0.0, 0.0),
             dir: rng.gen_range(-(2. * PI)..(2. * PI)),
             target_dir: rng.gen_range(-(2. * PI)..(2. * PI)),
+            carries_food: false,
         }
     }
 
@@ -28,6 +31,10 @@ impl Ant {
 
     pub fn dir(&self) -> f32 {
         self.dir
+    }
+
+    pub fn carries_food(&self) -> bool {
+        self.carries_food
     }
 
     pub fn step(&mut self) {
