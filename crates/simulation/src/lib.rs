@@ -35,14 +35,14 @@ impl Default for Simulation {
     fn default() -> Self {
         let mut ants = vec![];
 
-        for _ in 0..100 {
+        for _ in 0..200 {
             ants.push(Ant::random());
         }
 
         let mut foods = vec![];
         let mut rng = thread_rng();
 
-        for _ in 0..100 {
+        for _ in 0..1000 {
             foods.push(Food::new(vec2(
                 rng.gen_range(100.0..200.0),
                 rng.gen_range(100.0..200.0),
