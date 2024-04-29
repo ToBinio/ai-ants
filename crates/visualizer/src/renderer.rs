@@ -2,10 +2,11 @@ use crate::{RenderState, Timings};
 use ggez::glam::vec2;
 use ggez::graphics::{Canvas, Color, DrawParam, InstanceArray, Mesh, Text, TextFragment};
 use ggez::{graphics, Context, GameError, GameResult};
-use simulation::Simulation;
+use simulation::{Simulation, ANT_HILL_RADIUS};
 
 pub struct Renderer {
     ant_mesh: Mesh,
+    ant_hill_mesh: Mesh,
     pheromone_mesh: Mesh,
     food_mesh: Mesh,
 }
@@ -20,6 +21,15 @@ impl Renderer {
             5.0,
             0.1,
             Color::WHITE,
+        )?;
+
+        let ant_hill_mesh = Mesh::new_circle(
+            ctx,
+            graphics::DrawMode::fill(),
+            vec2(0., 0.),
+            ANT_HILL_RADIUS,
+            0.1,
+            Color::new(0.8, 0.7, 0.1, 1.),
         )?;
 
         let pheromone_mesh = Mesh::new_circle(
@@ -37,11 +47,12 @@ impl Renderer {
             vec2(0., 0.),
             3.0,
             0.1,
-            Color::WHITE,
+            Color::GREEN,
         )?;
 
         Ok(Renderer {
             ant_mesh,
+            ant_hill_mesh,
             pheromone_mesh,
             food_mesh,
         })
@@ -61,6 +72,8 @@ impl Renderer {
 
         self.draw_ants(simulation, canvas, ctx);
         self.draw_food(simulation, canvas, ctx);
+
+        canvas.draw(&self.ant_hill_mesh, DrawParam::from(vec2(0., 0.)));
 
         if render_state.draw_timings {
             self.draw_timings(simulation, timings, canvas, ctx);
@@ -118,11 +131,7 @@ impl Renderer {
         for food in simulation.foods() {
             let pos = food.pos();
 
-            instances.push(
-                DrawParam::new()
-                    .dest(vec2(pos.x, pos.y))
-                    .color(Color::GREEN),
-            );
+            instances.push(DrawParam::new().dest(vec2(pos.x, pos.y)));
         }
 
         canvas.draw_instanced_mesh(self.food_mesh.clone(), &instances, DrawParam::new());
@@ -145,6 +154,7 @@ update time: {:?}
     pheromone spawn time: {:?}
     pheromone remove time: {:?}
     pick up food time: {:?}
+    drop off food time: {:?}
             ",
             ctx.time.fps(),
             timings.render,
@@ -153,7 +163,8 @@ update time: {:?}
             simulation.timings().pheromone_updates,
             simulation.timings().pheromone_spawn,
             simulation.timings().pheromone_remove,
-            simulation.timings().pick_up_food
+            simulation.timings().pick_up_food,
+            simulation.timings().drop_of_food
         );
 
         let text = Text::new(TextFragment::new(text));

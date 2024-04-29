@@ -12,6 +12,7 @@ mod food;
 mod pheromone;
 
 const TICKS_UNTIL_PHEROMONE: usize = 10;
+pub const ANT_HILL_RADIUS: f32 = 50.;
 pub struct Simulation {
     ants: Vec<Ant>,
     pheromones: Vec<Pheromone>,
@@ -27,6 +28,7 @@ pub struct Timings {
     pub pheromone_spawn: Duration,
     pub pheromone_remove: Duration,
     pub pick_up_food: Duration,
+    pub drop_of_food: Duration,
 }
 
 impl Default for Simulation {
@@ -58,6 +60,7 @@ impl Default for Simulation {
                 pheromone_spawn: Default::default(),
                 pheromone_remove: Default::default(),
                 pick_up_food: Default::default(),
+                drop_of_food: Default::default(),
             },
         }
     }
@@ -91,6 +94,7 @@ impl Simulation {
 
         Simulation::update_pheromones(&mut self.pheromones, &mut self.timings);
         Simulation::pick_up_food(&mut self.ants, &mut self.foods, &mut self.timings);
+        Simulation::drop_of_food(&mut self.ants, &mut self.timings);
     }
 
     fn update_pheromones(pheromones: &mut Vec<Pheromone>, timings: &mut Timings) {
@@ -143,5 +147,16 @@ impl Simulation {
         }
 
         timings.pick_up_food = instant.elapsed();
+    }
+
+    fn drop_of_food(ants: &mut Vec<Ant>, timings: &mut Timings) {
+        let instant = Instant::now();
+
+        ants.par_iter_mut()
+            .filter(|ant| ant.carries_food())
+            .filter(|ant| ant.pos().length() < ANT_HILL_RADIUS)
+            .for_each(|ant| ant.set_carries_food(false));
+
+        timings.drop_of_food = instant.elapsed();
     }
 }
