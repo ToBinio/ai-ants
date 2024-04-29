@@ -17,3 +17,9 @@ then run
 ```bash
 just show
 ```
+
+### interact
+
+<kbd>S</kbd> -> toggle stats rendering
+
+<kbd>P</kbd> -> toggle pheromones rendering

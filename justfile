@@ -1,4 +1,4 @@
 set windows-shell := ["powershell.exe", "-NoLogo", "-Command"]
 
-show:
-    cargo run --bin visualizer
+@show *args='':
+    cargo run --bin visualizer $@
