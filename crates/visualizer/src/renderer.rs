@@ -144,6 +144,7 @@ update time: {:?}
     pheromone update time: {:?}
     pheromone spawn time: {:?}
     pheromone remove time: {:?}
+    pick up food time: {:?}
             ",
             ctx.time.fps(),
             timings.render,
@@ -151,7 +152,8 @@ update time: {:?}
             simulation.timings().ant_updates,
             simulation.timings().pheromone_updates,
             simulation.timings().pheromone_spawn,
-            simulation.timings().pheromone_remove
+            simulation.timings().pheromone_remove,
+            simulation.timings().pick_up_food
         );
 
         let text = Text::new(TextFragment::new(text));

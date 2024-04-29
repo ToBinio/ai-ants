@@ -4,6 +4,7 @@ use rand::{thread_rng, Rng};
 use std::f32::consts::PI;
 
 const ANT_SPEED: f32 = 100.;
+pub const ANT_PICK_UP_DISTANCE: f32 = 10.;
 
 pub struct Ant {
     pos: Vec2,
@@ -35,6 +36,10 @@ impl Ant {
 
     pub fn carries_food(&self) -> bool {
         self.carries_food
+    }
+
+    pub fn set_carries_food(&mut self, carries_food: bool) {
+        self.carries_food = carries_food
     }
 
     pub fn step(&mut self) {
