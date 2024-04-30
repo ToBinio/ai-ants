@@ -148,7 +148,7 @@ impl Renderer {
             "Stats:
 fps: {}
 steps: {}
-render time: {:?} 
+render time: {:?}
 update time: {:?}
     ant update time: {:?}
     neural network update time: {:?}
@@ -159,8 +159,8 @@ update time: {:?}
     pick up food time: {:?}
     drop off food time: {:?}
             ",
-            simulation.stats().step_count,
             ctx.time.fps(),
+            simulation.stats().step_count,
             timings.render,
             timings.update,
             simulation.timings().ant_updates,

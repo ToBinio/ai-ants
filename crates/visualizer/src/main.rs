@@ -1,6 +1,9 @@
 use crate::renderer::Renderer;
 use ggez::conf::WindowMode;
 use ggez::event::{self, EventHandler};
+use std::fs::File;
+use std::io::BufReader;
+use std::{env, fs};
 
 use ggez::graphics::{self, Color, Rect};
 use ggez::input::keyboard::KeyInput;
@@ -18,7 +21,21 @@ fn main() {
         .build()
         .expect("could not create ggez context!");
 
-    let my_game = SimulationVisualizer::new(&mut ctx).expect("could not initialize game");
+    let neural_network = env::args()
+        .skip(1)
+        .next()
+        .map(|path| {
+            println!("{}", path);
+
+            let file = File::open(path).unwrap();
+            let reader = BufReader::new(file);
+            serde_json::from_reader(reader).unwrap()
+        })
+        .or_else(|| Some(NeuralNetwork::new(vec![5, 5, 5, 1])))
+        .unwrap();
+
+    let my_game =
+        SimulationVisualizer::new(&mut ctx, neural_network).expect("could not initialize game");
 
     event::run(ctx, event_loop, my_game);
 }
@@ -41,9 +58,12 @@ struct RenderState {
 }
 
 impl SimulationVisualizer {
-    pub fn new(ctx: &mut Context) -> Result<SimulationVisualizer, GameError> {
+    pub fn new(
+        ctx: &mut Context,
+        neural_network: NeuralNetwork,
+    ) -> Result<SimulationVisualizer, GameError> {
         Ok(SimulationVisualizer {
-            simulation: Simulation::new(NeuralNetwork::new(vec![5, 5, 5, 1])),
+            simulation: Simulation::new(neural_network),
             renderer: Renderer::new(ctx)?,
             render_state: RenderState {
                 draw_timings: true,
