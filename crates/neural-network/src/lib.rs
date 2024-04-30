@@ -1,5 +1,6 @@
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
+use std::ops::Range;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeuralNetwork {
@@ -74,5 +75,19 @@ impl NeuralNetwork {
         }
 
         current_values
+    }
+
+    pub fn mutate(&mut self, mutation_chance: f32, range: Range<f64>) {
+        let mut rng = thread_rng();
+
+        for layer in &mut self.layers {
+            for node in &mut layer.nodes {
+                for index in 0..node.weights.len() {
+                    if rng.gen::<f32>() < mutation_chance {
+                        node.weights[index] += rng.gen_range(range.clone());
+                    }
+                }
+            }
+        }
     }
 }

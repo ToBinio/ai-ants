@@ -39,10 +39,12 @@ fn main() {
 
         simulations.clear();
 
-        simulations.push(Simulation::new(best_network));
         for _ in 1..10 {
-            simulations.push(Simulation::new(NeuralNetwork::new(vec![5, 5, 5, 1])))
+            let mut neural_network = best_network.clone();
+            neural_network.mutate(0.1, -0.5..0.5);
+            simulations.push(Simulation::new(neural_network))
         }
+        simulations.push(Simulation::new(best_network));
     }
 }
 
