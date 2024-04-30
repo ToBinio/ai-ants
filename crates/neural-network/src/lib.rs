@@ -1,17 +1,18 @@
 use rand::{thread_rng, Rng};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NeuralNetwork {
     layers: Vec<Layer>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 
 struct Layer {
     nodes: Vec<Node>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Node {
     weights: Vec<f64>,
 }
@@ -64,6 +65,7 @@ impl NeuralNetwork {
                     val += current_values[index] * weight;
                 }
 
+                //todo activation function
                 next_values.push(val);
             }
 

@@ -16,16 +16,21 @@ const TICKS_UNTIL_PHEROMONE: usize = 10;
 pub const ANT_HILL_RADIUS: f32 = 50.;
 pub const GAME_SIZE: f32 = 500.;
 pub struct Simulation {
-    step_count: usize,
-
     ants: Vec<Ant>,
     pheromones: Vec<Pheromone>,
     foods: Vec<Food>,
 
     ticks_until_pheromone: usize,
     timings: Timings,
+    stats: Stats,
 
     neural_network: NeuralNetwork,
+}
+
+pub struct Stats {
+    pub step_count: usize,
+    pub picked_up_food: usize,
+    pub dropped_of_food: usize,
 }
 
 pub struct Timings {
@@ -69,7 +74,6 @@ impl Simulation {
         }
 
         Simulation {
-            step_count: 0,
             ants,
             pheromones: vec![],
             foods,
@@ -83,6 +87,11 @@ impl Simulation {
                 pheromone_remove: Default::default(),
                 pick_up_food: Default::default(),
                 drop_of_food: Default::default(),
+            },
+            stats: Stats {
+                step_count: 0,
+                picked_up_food: 0,
+                dropped_of_food: 0,
             },
             neural_network,
         }
@@ -98,15 +107,18 @@ impl Simulation {
     pub fn pheromones(&self) -> &Vec<Pheromone> {
         &self.pheromones
     }
+    pub fn neural_network(&self) -> &NeuralNetwork {
+        &self.neural_network
+    }
     pub fn foods(&self) -> &Vec<Food> {
         &self.foods
     }
-    pub fn step_count(&self) -> usize {
-        self.step_count
+    pub fn stats(&self) -> &Stats {
+        &self.stats
     }
 
     pub fn step(&mut self) {
-        self.step_count += 1;
+        self.stats.step_count += 1;
 
         Simulation::update_network(&mut self.ants, &self.neural_network, &mut self.timings);
         Simulation::update_ants(&mut self.ants, &mut self.timings);
@@ -120,8 +132,13 @@ impl Simulation {
         }
 
         Simulation::update_pheromones(&mut self.pheromones, &mut self.timings);
-        Simulation::pick_up_food(&mut self.ants, &mut self.foods, &mut self.timings);
-        Simulation::drop_of_food(&mut self.ants, &mut self.timings);
+        Simulation::pick_up_food(
+            &mut self.ants,
+            &mut self.foods,
+            &mut self.timings,
+            &mut self.stats,
+        );
+        Simulation::drop_of_food(&mut self.ants, &mut self.timings, &mut self.stats);
     }
 
     fn update_network(ants: &mut Vec<Ant>, neural_network: &NeuralNetwork, timings: &mut Timings) {
@@ -175,7 +192,12 @@ impl Simulation {
         timings.pheromone_spawn = instant.elapsed();
     }
 
-    fn pick_up_food(ants: &mut [Ant], foods: &mut Vec<Food>, timings: &mut Timings) {
+    fn pick_up_food(
+        ants: &mut [Ant],
+        foods: &mut Vec<Food>,
+        timings: &mut Timings,
+        stats: &mut Stats,
+    ) {
         let instant = Instant::now();
 
         for ant in ants.iter_mut().filter(|ant| !ant.carries_food()) {
@@ -185,6 +207,7 @@ impl Simulation {
                 let distance =
                     vec2(food.pos().x - ant.pos().x, food.pos().y - ant.pos().y).length();
                 if distance < ANT_PICK_UP_DISTANCE {
+                    stats.picked_up_food += 1;
                     picked_up_food = Some(index);
                     break;
                 }
@@ -199,13 +222,16 @@ impl Simulation {
         timings.pick_up_food = instant.elapsed();
     }
 
-    fn drop_of_food(ants: &mut Vec<Ant>, timings: &mut Timings) {
+    fn drop_of_food(ants: &mut Vec<Ant>, timings: &mut Timings, stats: &mut Stats) {
         let instant = Instant::now();
 
-        ants.par_iter_mut()
+        ants.iter_mut()
             .filter(|ant| ant.carries_food())
             .filter(|ant| ant.pos().length() < ANT_HILL_RADIUS)
-            .for_each(|ant| ant.set_carries_food(false));
+            .for_each(|ant| {
+                stats.dropped_of_food += 1;
+                ant.set_carries_food(false)
+            });
 
         timings.drop_of_food = instant.elapsed();
     }

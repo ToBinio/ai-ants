@@ -146,8 +146,8 @@ impl Renderer {
     ) {
         let text = format!(
             "Stats:
-steps: {}
 fps: {}
+steps: {}
 render time: {:?} 
 update time: {:?}
     ant update time: {:?}
@@ -159,7 +159,7 @@ update time: {:?}
     pick up food time: {:?}
     drop off food time: {:?}
             ",
-            simulation.step_count(),
+            simulation.stats().step_count,
             ctx.time.fps(),
             timings.render,
             timings.update,
