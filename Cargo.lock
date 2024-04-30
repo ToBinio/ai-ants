@@ -1489,6 +1489,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "neural-network"
+version = "0.1.0"
+dependencies = [
+ "rand",
+]
+
+[[package]]
 name = "nix"
 version = "0.24.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2129,6 +2136,7 @@ version = "0.1.0"
 dependencies = [
  "glam 0.27.0",
  "itertools",
+ "neural-network",
  "rand",
  "rayon",
 ]
@@ -2419,6 +2427,7 @@ dependencies = [
 name = "trainer"
 version = "0.1.0"
 dependencies = [
+ "neural-network",
  "simulation",
 ]
 
@@ -2495,6 +2504,7 @@ name = "visualizer"
 version = "0.1.0"
 dependencies = [
  "ggez",
+ "neural-network",
  "simulation",
 ]
 

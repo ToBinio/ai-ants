@@ -1,12 +1,9 @@
 [package]
-name = "visualizer"
+name = "neural-network"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-simulation = { path = "../simulation" }
-neural-network = { path = "../neural-network" }
-
-ggez = "0.9.3"
+rand = "0.8.5"

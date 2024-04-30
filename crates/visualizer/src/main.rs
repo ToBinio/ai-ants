@@ -6,6 +6,7 @@ use ggez::graphics::{self, Color, Rect};
 use ggez::input::keyboard::KeyInput;
 use ggez::winit::event::VirtualKeyCode;
 use ggez::{Context, ContextBuilder, GameError, GameResult};
+use neural_network::NeuralNetwork;
 use simulation::Simulation;
 use std::time::{Duration, Instant};
 
@@ -42,7 +43,7 @@ struct RenderState {
 impl SimulationVisualizer {
     pub fn new(ctx: &mut Context) -> Result<SimulationVisualizer, GameError> {
         Ok(SimulationVisualizer {
-            simulation: Simulation::default(),
+            simulation: Simulation::new(NeuralNetwork::new(vec![5, 5, 5, 1])),
             renderer: Renderer::new(ctx)?,
             render_state: RenderState {
                 draw_timings: true,

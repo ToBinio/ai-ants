@@ -1,10 +1,11 @@
+use neural_network::NeuralNetwork;
 use simulation::Simulation;
 use std::time::Instant;
 
 fn main() {
     println!("Starting training!");
 
-    let mut simulation = Simulation::default();
+    let mut simulation = Simulation::new(NeuralNetwork::new(vec![5, 5, 5, 1]));
 
     let mut last_print_time = Instant::now();
     let start_time = Instant::now();
