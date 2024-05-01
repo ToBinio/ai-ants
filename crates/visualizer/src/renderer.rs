@@ -147,9 +147,12 @@ impl Renderer {
         let text = format!(
             "Stats:
 fps: {}
-render time: {:?} 
+steps: {}
+render time: {:?}
 update time: {:?}
     ant update time: {:?}
+    neural network update time: {:?}
+    keep ants update time: {:?}
     pheromone update time: {:?}
     pheromone spawn time: {:?}
     pheromone remove time: {:?}
@@ -157,9 +160,12 @@ update time: {:?}
     drop off food time: {:?}
             ",
             ctx.time.fps(),
+            simulation.stats().step_count,
             timings.render,
             timings.update,
             simulation.timings().ant_updates,
+            simulation.timings().neural_network_updates,
+            simulation.timings().keep_ants,
             simulation.timings().pheromone_updates,
             simulation.timings().pheromone_spawn,
             simulation.timings().pheromone_remove,
