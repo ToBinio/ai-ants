@@ -1,50 +1,47 @@
-use chrono::Local;
-use itertools::Itertools;
+use clap::{Parser, Subcommand};
 use neural_network::NeuralNetwork;
-use rayon::prelude::*;
 use simulation::Simulation;
-use std::fs;
 use std::time::Instant;
+
+use crate::train::Trainer;
+
+mod train;
 
 const STEPS_PER_SIMULATION: usize = 5000;
 
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+#[command(propagate_version = true)]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Benchmark,
+    Train {
+        #[arg(short, long, default_value_t = 10)]
+        count: usize,
+    },
+}
+
 fn main() {
-    println!("Starting training!");
+    let cli = Cli::parse();
 
-    // let mut simulation = Simulation::new(NeuralNetwork::new(vec![5, 5, 5, 1]));
-    // benchmark(&mut simulation);
+    match cli.command {
+        Commands::Train { count } => {
+            println!("Starting training!");
 
-    let mut simulations = vec![];
-
-    for _ in 0..10 {
-        simulations.push(Simulation::new(NeuralNetwork::new(vec![5, 5, 5, 1])))
-    }
-
-    loop {
-        run(&mut simulations);
-        let (best, score) = get_best(&simulations);
-        let best_network = best.neural_network().clone();
-
-        fs::write(
-            format!(
-                "./training/{}-{}.json",
-                Local::now().format("%Y-%m-%d|%H:%M:%S"),
-                score
-            ),
-            serde_json::to_string(&best_network).unwrap(),
-        )
-        .unwrap();
-
-        println!("best score: {}", score);
-
-        simulations.clear();
-
-        for _ in 1..10 {
-            let mut neural_network = best_network.clone();
-            neural_network.mutate(0.1, -0.5..0.5);
-            simulations.push(Simulation::new(neural_network))
+            let mut trainer = Trainer::new(count);
+            trainer.train()
         }
-        simulations.push(Simulation::new(best_network));
+        Commands::Benchmark => {
+            println!("Starting Benchmark!");
+
+            let mut simulation = Simulation::new(NeuralNetwork::new(vec![5, 5, 5, 1]));
+            benchmark(&mut simulation);
+        }
     }
 }
 
@@ -64,25 +61,4 @@ fn benchmark(simulation: &mut Simulation) {
 
         simulation.step();
     }
-}
-
-fn run(simulations: &mut Vec<Simulation>) {
-    simulations.par_iter_mut().for_each(|simulation| {
-        for _ in 0..STEPS_PER_SIMULATION {
-            simulation.step();
-        }
-    });
-}
-
-fn get_best(simulations: &Vec<Simulation>) -> (&Simulation, usize) {
-    simulations
-        .iter()
-        .map(|simulation| (simulation, eval(simulation)))
-        .sorted_by(|a, b| b.1.cmp(&a.1))
-        .next()
-        .unwrap()
-}
-
-fn eval(simulation: &Simulation) -> usize {
-    simulation.stats().dropped_of_food * 5 + simulation.stats().picked_up_food
 }

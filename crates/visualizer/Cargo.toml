@@ -12,3 +12,4 @@ neural-network = { path = "../neural-network" }
 ggez = "0.9.3"
 serde = "1.0.199"
 serde_json = "1.0.116"
+clap = { version = "4.5.4", features = ["derive"] }

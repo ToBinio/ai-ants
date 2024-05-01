@@ -1,9 +1,10 @@
 use crate::renderer::Renderer;
+use clap::{arg, Parser};
 use ggez::conf::WindowMode;
 use ggez::event::{self, EventHandler};
+use std::env;
 use std::fs::File;
 use std::io::BufReader;
-use std::{env, fs};
 
 use ggez::graphics::{self, Color, Rect};
 use ggez::input::keyboard::KeyInput;
@@ -15,15 +16,19 @@ use std::time::{Duration, Instant};
 
 mod renderer;
 
-fn main() {
-    let (mut ctx, event_loop) = ContextBuilder::new("ai ants", "ToBinio")
-        .window_mode(WindowMode::default().resizable(true))
-        .build()
-        .expect("could not create ggez context!");
+#[derive(Parser)]
+#[command(version, about, long_about = None)]
+#[command(propagate_version = true)]
+struct Cli {
+    #[arg(short, long)]
+    path: Option<String>,
+}
 
-    let neural_network = env::args()
-        .skip(1)
-        .next()
+fn main() {
+    let cli = Cli::parse();
+
+    let neural_network = cli
+        .path
         .map(|path| {
             println!("{}", path);
 
@@ -33,6 +38,14 @@ fn main() {
         })
         .or_else(|| Some(NeuralNetwork::new(vec![5, 5, 5, 1])))
         .unwrap();
+
+    let (mut ctx, event_loop) = ContextBuilder::new("ai ants", "ToBinio")
+        .window_mode(WindowMode::default().resizable(true))
+        .build()
+        .expect("could not create ggez context!");
+
+    let x: Vec<String> = env::args().collect();
+    println!("{:?}", x);
 
     let my_game =
         SimulationVisualizer::new(&mut ctx, neural_network).expect("could not initialize game");
