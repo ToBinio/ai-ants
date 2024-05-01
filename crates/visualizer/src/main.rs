@@ -11,7 +11,7 @@ use ggez::input::keyboard::KeyInput;
 use ggez::winit::event::VirtualKeyCode;
 use ggez::{Context, ContextBuilder, GameError, GameResult};
 use neural_network::NeuralNetwork;
-use simulation::Simulation;
+use simulation::{Simulation, NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE};
 use std::time::{Duration, Instant};
 
 mod renderer;
@@ -36,7 +36,14 @@ fn main() {
             let reader = BufReader::new(file);
             serde_json::from_reader(reader).unwrap()
         })
-        .or_else(|| Some(NeuralNetwork::new(vec![5, 5, 5, 1])))
+        .or_else(|| {
+            Some(NeuralNetwork::new(vec![
+                NEURAL_NETWORK_INPUT_SIZE,
+                5,
+                5,
+                NEURAL_NETWORK_OUTPUT_SIZE,
+            ]))
+        })
         .unwrap();
 
     let (mut ctx, event_loop) = ContextBuilder::new("ai ants", "ToBinio")

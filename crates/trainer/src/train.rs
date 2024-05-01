@@ -4,7 +4,7 @@ use chrono::Local;
 use itertools::Itertools;
 use neural_network::NeuralNetwork;
 use rayon::prelude::*;
-use simulation::Simulation;
+use simulation::{Simulation, NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE};
 
 use crate::STEPS_PER_SIMULATION;
 
@@ -17,7 +17,12 @@ impl Trainer {
         let mut simulations = vec![];
 
         for _ in 0..simulation_count {
-            simulations.push(Simulation::new(NeuralNetwork::new(vec![5, 5, 5, 1])))
+            simulations.push(Simulation::new(NeuralNetwork::new(vec![
+                NEURAL_NETWORK_INPUT_SIZE,
+                5,
+                5,
+                NEURAL_NETWORK_OUTPUT_SIZE,
+            ])))
         }
 
         Trainer { simulations }

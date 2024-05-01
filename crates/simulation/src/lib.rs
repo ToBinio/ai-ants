@@ -15,6 +15,10 @@ mod pheromone;
 const TICKS_UNTIL_PHEROMONE: usize = 10;
 pub const ANT_HILL_RADIUS: f32 = 50.;
 pub const GAME_SIZE: f32 = 500.;
+
+pub const NEURAL_NETWORK_INPUT_SIZE: usize = 5;
+pub const NEURAL_NETWORK_OUTPUT_SIZE: usize = 4;
+
 pub struct Simulation {
     ants: Vec<Ant>,
     pheromones: Vec<Pheromone>,
@@ -48,12 +52,12 @@ impl Simulation {
     pub fn new(neural_network: NeuralNetwork) -> Simulation {
         assert_eq!(
             neural_network.get_input_size(),
-            5,
+            NEURAL_NETWORK_INPUT_SIZE,
             "Neural-network has wrong input size"
         );
         assert_eq!(
             neural_network.get_output_size(),
-            1,
+            NEURAL_NETWORK_OUTPUT_SIZE,
             "Neural-network has wrong output size"
         );
 

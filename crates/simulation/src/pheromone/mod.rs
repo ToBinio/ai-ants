@@ -10,12 +10,12 @@ pub struct Pheromone {
 }
 
 impl Pheromone {
-    pub fn new(pos: Vec2, strength: f32) -> Pheromone {
+    pub fn new(pos: Vec2, strength: f32, color: (f32, f32, f32)) -> Pheromone {
         Pheromone {
             pos,
             size: 1.0,
             strength,
-            color: (0.8, 0., 1.),
+            color,
         }
     }
 

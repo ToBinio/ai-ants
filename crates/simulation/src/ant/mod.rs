@@ -13,6 +13,8 @@ pub struct Ant {
     target_dir: f32,
 
     carries_food: bool,
+
+    pheromon_color: (f32, f32, f32),
 }
 
 impl Ant {
@@ -24,6 +26,7 @@ impl Ant {
             dir: rng.gen_range(-(2. * PI)..(2. * PI)),
             target_dir: rng.gen_range(-(2. * PI)..(2. * PI)),
             carries_food: false,
+            pheromon_color: (0.0, 0.0, 0.0),
         }
     }
 
@@ -50,6 +53,7 @@ impl Ant {
 
     pub fn set_neural_network_values(&mut self, values: Vec<f64>) {
         self.target_dir += values[0] as f32;
+        self.pheromon_color = (values[1] as f32, values[2] as f32, values[3] as f32)
     }
 
     pub fn get_neural_network_values(&self) -> Vec<f64> {
@@ -84,7 +88,6 @@ impl Ant {
     }
 
     pub fn new_pheromone(&self) -> Pheromone {
-        //todo strength from ai
-        Pheromone::new(self.pos, 5.)
+        Pheromone::new(self.pos, 5., self.pheromon_color)
     }
 }
