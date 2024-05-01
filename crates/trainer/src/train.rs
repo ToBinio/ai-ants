@@ -1,4 +1,4 @@
-use std::fs;
+use std::fs::{self};
 
 use chrono::Local;
 use itertools::Itertools;
@@ -29,15 +29,7 @@ impl Trainer {
             let (best, score) = self.get_best();
             let best_network = best.neural_network().clone();
 
-            fs::write(
-                format!(
-                    "./training/{}-{}.json",
-                    Local::now().format("%Y-%m-%d#%H:%M:%S"),
-                    score
-                ),
-                serde_json::to_string(&best_network).unwrap(),
-            )
-            .unwrap();
+            Self::save_network(score, &best_network);
 
             println!("best score: {}", score);
 
@@ -71,5 +63,18 @@ impl Trainer {
 
     fn eval(simulation: &Simulation) -> usize {
         simulation.stats().dropped_of_food * 5 + simulation.stats().picked_up_food
+    }
+
+    fn save_network(score: usize, best_network: &NeuralNetwork) {
+        let path_string = format!(
+            "./training/{}-{}.json",
+            Local::now().format("%Y-%m-%d#%H:%M:%S"),
+            score
+        );
+        let path = std::path::Path::new(&path_string);
+        let prefix = path.parent().unwrap();
+        std::fs::create_dir_all(prefix).unwrap();
+
+        fs::write(path, serde_json::to_string(best_network).unwrap()).unwrap();
     }
 }

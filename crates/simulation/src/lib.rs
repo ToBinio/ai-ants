@@ -222,7 +222,7 @@ impl Simulation {
         timings.pick_up_food = instant.elapsed();
     }
 
-    fn drop_of_food(ants: &mut Vec<Ant>, timings: &mut Timings, stats: &mut Stats) {
+    fn drop_of_food(ants: &mut [Ant], timings: &mut Timings, stats: &mut Stats) {
         let instant = Instant::now();
 
         ants.iter_mut()
