@@ -56,22 +56,20 @@ impl NeuralNetwork {
 
     pub fn run(&self, input: Vec<f64>) -> Vec<f64> {
         let mut current_values = input;
-        let mut next_values = vec![];
 
         for layer in self.layers.iter().skip(1) {
-            for node in &layer.nodes {
-                let mut val = 0.;
-
-                for (index, weight) in node.weights.iter().enumerate() {
-                    val += current_values[index] * weight;
-                }
-
-                //todo activation function
-                next_values.push(val);
-            }
-
-            current_values = next_values;
-            next_values = vec![];
+            current_values = layer
+                .nodes
+                .iter()
+                .map(|node| {
+                    //todo activation function
+                    node.weights
+                        .iter()
+                        .enumerate()
+                        .map(|(index, weight)| current_values[index] * weight)
+                        .sum()
+                })
+                .collect();
         }
 
         current_values

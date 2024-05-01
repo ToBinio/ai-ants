@@ -1,6 +1,5 @@
 use crate::ant::{Ant, ANT_PICK_UP_DISTANCE};
 use crate::pheromone::Pheromone;
-use rayon::prelude::*;
 
 use crate::food::Food;
 use glam::vec2;
@@ -147,7 +146,7 @@ impl Simulation {
 
     fn update_network(ants: &mut Vec<Ant>, neural_network: &NeuralNetwork, timings: &mut Timings) {
         let instant = Instant::now();
-        ants.par_iter_mut().for_each(|ant| {
+        ants.iter_mut().for_each(|ant| {
             let values = neural_network.run(ant.get_neural_network_values());
             ant.set_neural_network_values(values);
         });
@@ -156,9 +155,7 @@ impl Simulation {
 
     fn update_pheromones(pheromones: &mut Vec<Pheromone>, timings: &mut Timings) {
         let instant = Instant::now();
-        pheromones
-            .par_iter_mut()
-            .for_each(|pheromone| pheromone.step());
+        pheromones.iter_mut().for_each(|pheromone| pheromone.step());
         timings.pheromone_updates = instant.elapsed();
 
         let instant = Instant::now();
@@ -168,13 +165,13 @@ impl Simulation {
 
     fn update_ants(ants: &mut Vec<Ant>, timings: &mut Timings) {
         let instant = Instant::now();
-        ants.par_iter_mut().for_each(|ant| ant.step());
+        ants.iter_mut().for_each(|ant| ant.step());
         timings.ant_updates = instant.elapsed();
     }
 
     fn keep_ants(ants: &mut Vec<Ant>, timings: &mut Timings) {
         let instant = Instant::now();
-        ants.par_iter_mut().for_each(|ant| {
+        ants.iter_mut().for_each(|ant| {
             if ant.pos().x > GAME_SIZE
                 || ant.pos().x < -GAME_SIZE
                 || ant.pos().y > GAME_SIZE

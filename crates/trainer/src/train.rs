@@ -29,12 +29,15 @@ impl Trainer {
     }
 
     pub fn train(&mut self) {
+        let mut gen_count = 0;
+
         loop {
+            gen_count += 1;
             self.run();
             let (best, score) = self.get_best();
             let best_network = best.neural_network().clone();
 
-            Self::save_network(score, &best_network);
+            Self::save_network(gen_count, score, &best_network);
 
             println!("best score: {}", score);
 
@@ -70,10 +73,11 @@ impl Trainer {
         simulation.stats().dropped_of_food * 5 + simulation.stats().picked_up_food
     }
 
-    fn save_network(score: usize, best_network: &NeuralNetwork) {
+    fn save_network(gen: usize, score: usize, best_network: &NeuralNetwork) {
         let path_string = format!(
-            "./training/{}-{}.json",
-            Local::now().format("%Y-%m-%d#%H:%M:%S"),
+            "./training/{}-{}-{}.json",
+            gen,
+            Local::now().format("%Y:%m:%d_%H:%M:%S"),
             score
         );
         let path = std::path::Path::new(&path_string);

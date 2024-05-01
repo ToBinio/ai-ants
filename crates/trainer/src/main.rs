@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use neural_network::NeuralNetwork;
-use simulation::Simulation;
+use simulation::{Simulation, NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE};
 use std::time::Instant;
 
 use crate::train::Trainer;
@@ -39,7 +39,12 @@ fn main() {
         Commands::Benchmark => {
             println!("Starting Benchmark!");
 
-            let mut simulation = Simulation::new(NeuralNetwork::new(vec![5, 5, 5, 1]));
+            let mut simulation = Simulation::new(NeuralNetwork::new(vec![
+                NEURAL_NETWORK_INPUT_SIZE,
+                5,
+                5,
+                NEURAL_NETWORK_OUTPUT_SIZE,
+            ]));
             benchmark(&mut simulation);
         }
     }
