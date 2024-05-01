@@ -39,7 +39,8 @@ fn main() {
         .or_else(|| {
             Some(NeuralNetwork::new(vec![
                 NEURAL_NETWORK_INPUT_SIZE,
-                5,
+                10,
+                7,
                 5,
                 NEURAL_NETWORK_OUTPUT_SIZE,
             ]))
@@ -75,6 +76,7 @@ struct Timings {
 struct RenderState {
     draw_timings: bool,
     draw_pheromones: bool,
+    draw_rays: bool,
 }
 
 impl SimulationVisualizer {
@@ -88,6 +90,7 @@ impl SimulationVisualizer {
             render_state: RenderState {
                 draw_timings: true,
                 draw_pheromones: false,
+                draw_rays: false,
             },
             timings: Timings {
                 render: Default::default(),
@@ -147,9 +150,12 @@ impl EventHandler for SimulationVisualizer {
                 VirtualKeyCode::P => {
                     self.render_state.draw_pheromones = !self.render_state.draw_pheromones
                 }
+
                 VirtualKeyCode::S => {
                     self.render_state.draw_timings = !self.render_state.draw_timings
                 }
+
+                VirtualKeyCode::R => self.render_state.draw_rays = !self.render_state.draw_rays,
                 _ => {}
             }
         }

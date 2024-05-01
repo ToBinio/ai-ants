@@ -2,20 +2,25 @@ use crate::ant::{Ant, ANT_PICK_UP_DISTANCE};
 use crate::pheromone::Pheromone;
 
 use crate::food::Food;
+use ant::{ANT_RAY_COUNT, ANT_SEE_DISTANCE};
 use glam::vec2;
+use itertools::Itertools;
+use math::ray_inserect_circle;
 use neural_network::NeuralNetwork;
 use rand::{thread_rng, Rng};
 use std::time::{Duration, Instant};
 
-mod ant;
+pub mod ant;
 mod food;
+mod math;
 mod pheromone;
 
 const TICKS_UNTIL_PHEROMONE: usize = 10;
 pub const ANT_HILL_RADIUS: f32 = 50.;
 pub const GAME_SIZE: f32 = 500.;
+pub const FOOD_SIZE: f32 = 7.;
 
-pub const NEURAL_NETWORK_INPUT_SIZE: usize = 5;
+pub const NEURAL_NETWORK_INPUT_SIZE: usize = 5 + ANT_RAY_COUNT;
 pub const NEURAL_NETWORK_OUTPUT_SIZE: usize = 4;
 
 pub struct Simulation {
@@ -45,6 +50,7 @@ pub struct Timings {
     pub pheromone_remove: Duration,
     pub pick_up_food: Duration,
     pub drop_of_food: Duration,
+    pub see_food: Duration,
 }
 
 impl Simulation {
@@ -90,6 +96,7 @@ impl Simulation {
                 pheromone_remove: Default::default(),
                 pick_up_food: Default::default(),
                 drop_of_food: Default::default(),
+                see_food: Default::default(),
             },
             stats: Stats {
                 step_count: 0,
@@ -125,6 +132,7 @@ impl Simulation {
 
         Simulation::update_network(&mut self.ants, &self.neural_network, &mut self.timings);
         Simulation::update_ants(&mut self.ants, &mut self.timings);
+        Simulation::see_food(&mut self.ants, &self.foods, &mut self.timings);
         Simulation::keep_ants(&mut self.ants, &mut self.timings);
 
         if self.ticks_until_pheromone == 0 {
@@ -206,8 +214,8 @@ impl Simulation {
 
             for (index, food) in foods.iter().enumerate() {
                 let distance =
-                    vec2(food.pos().x - ant.pos().x, food.pos().y - ant.pos().y).length();
-                if distance < ANT_PICK_UP_DISTANCE {
+                    vec2(food.pos().x - ant.pos().x, food.pos().y - ant.pos().y).length_squared();
+                if distance < ANT_PICK_UP_DISTANCE * ANT_PICK_UP_DISTANCE {
                     stats.picked_up_food += 1;
                     picked_up_food = Some(index);
                     break;
@@ -223,12 +231,38 @@ impl Simulation {
         timings.pick_up_food = instant.elapsed();
     }
 
+    fn see_food(ants: &mut [Ant], foods: &[Food], timings: &mut Timings) {
+        let instant = Instant::now();
+
+        for ant in ants {
+            let ray_values = ant
+                .get_ray_directions()
+                .into_iter()
+                .map(|ray_direction| {
+                    foods
+                        .iter()
+                        .filter_map(|food| {
+                            ray_inserect_circle(*food.pos(), FOOD_SIZE, *ant.pos(), ray_direction)
+                        })
+                        .filter(|distance| distance < &ANT_SEE_DISTANCE)
+                        .sorted_by(|a, b| a.total_cmp(&b))
+                        .next()
+                        .unwrap_or_else(|| -1.0)
+                })
+                .collect_vec();
+
+            ant.set_rays(ray_values);
+        }
+
+        timings.see_food = instant.elapsed();
+    }
+
     fn drop_of_food(ants: &mut [Ant], timings: &mut Timings, stats: &mut Stats) {
         let instant = Instant::now();
 
         ants.iter_mut()
             .filter(|ant| ant.carries_food())
-            .filter(|ant| ant.pos().length() < ANT_HILL_RADIUS)
+            .filter(|ant| ant.pos().length_squared() < ANT_HILL_RADIUS * ANT_HILL_RADIUS)
             .for_each(|ant| {
                 stats.dropped_of_food += 1;
                 ant.set_carries_food(false)

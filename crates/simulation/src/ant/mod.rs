@@ -7,6 +7,11 @@ use std::f32::consts::PI;
 const ANT_SPEED: f32 = 100.;
 pub const ANT_PICK_UP_DISTANCE: f32 = 10.;
 
+pub const ANT_RAY_COUNT: usize = 7;
+//see 90° evenly
+pub const ANT_RAY_ANGLE: f32 = ((PI * 2.) / 4.) / ANT_RAY_COUNT as f32;
+pub const ANT_SEE_DISTANCE: f32 = 50.;
+
 pub struct Ant {
     pos: Vec2,
     dir: f32,
@@ -15,11 +20,19 @@ pub struct Ant {
     carries_food: bool,
 
     pheromon_color: (f32, f32, f32),
+
+    rays: Vec<f32>,
 }
 
 impl Ant {
     pub fn random() -> Ant {
         let mut rng = thread_rng();
+
+        let mut rays = vec![];
+
+        for _ in 0..ANT_RAY_COUNT {
+            rays.push(0.);
+        }
 
         Ant {
             pos: vec2(0.0, 0.0),
@@ -27,6 +40,7 @@ impl Ant {
             target_dir: rng.gen_range(-(2. * PI)..(2. * PI)),
             carries_food: false,
             pheromon_color: (0.0, 0.0, 0.0),
+            rays,
         }
     }
 
@@ -57,13 +71,36 @@ impl Ant {
     }
 
     pub fn get_neural_network_values(&self) -> Vec<f64> {
-        vec![
+        let mut values = vec![
             (self.pos.x / GAME_SIZE) as f64,
             (self.pos.y / GAME_SIZE) as f64,
             (self.dir / PI * 2.) as f64,
             (self.target_dir / PI * 2.) as f64,
             if self.carries_food { 1. } else { -1. },
-        ]
+        ];
+
+        for ray in &self.rays {
+            values.push(*ray as f64);
+        }
+
+        values
+    }
+
+    pub fn set_rays(&mut self, value: Vec<f32>) {
+        self.rays = value;
+    }
+
+    pub fn get_ray_directions(&self) -> Vec<Vec2> {
+        let mut rays = vec![];
+
+        let mut current_angle = (ANT_RAY_COUNT as f32 / 2.).floor() * -ANT_RAY_ANGLE;
+
+        for _ in 0..ANT_RAY_COUNT {
+            current_angle += ANT_RAY_ANGLE;
+            rays.push(Vec2::from_angle(current_angle + self.dir))
+        }
+
+        rays
     }
 
     pub fn step(&mut self) {

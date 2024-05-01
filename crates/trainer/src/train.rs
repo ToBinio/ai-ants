@@ -24,7 +24,8 @@ impl Trainer {
         for _ in 0..simulation_count {
             simulations.push(Simulation::new(NeuralNetwork::new(vec![
                 NEURAL_NETWORK_INPUT_SIZE,
-                5,
+                10,
+                7,
                 5,
                 NEURAL_NETWORK_OUTPUT_SIZE,
             ])))

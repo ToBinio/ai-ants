@@ -1,14 +1,17 @@
 use crate::{RenderState, Timings};
 use ggez::glam::vec2;
 use ggez::graphics::{Canvas, Color, DrawParam, InstanceArray, Mesh, Text, TextFragment};
+use ggez::winit::window::ResizeDirection;
 use ggez::{graphics, Context, GameError, GameResult};
-use simulation::{Simulation, ANT_HILL_RADIUS};
+use simulation::ant::ANT_SEE_DISTANCE;
+use simulation::{Simulation, ANT_HILL_RADIUS, FOOD_SIZE, GAME_SIZE};
 
 pub struct Renderer {
     ant_mesh: Mesh,
     ant_hill_mesh: Mesh,
     pheromone_mesh: Mesh,
     food_mesh: Mesh,
+    map_mesh: Mesh,
 }
 
 impl Renderer {
@@ -45,9 +48,21 @@ impl Renderer {
             ctx,
             graphics::DrawMode::fill(),
             vec2(0., 0.),
-            3.0,
+            FOOD_SIZE,
             0.1,
             Color::GREEN,
+        )?;
+
+        let map_mesh = Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::fill(),
+            graphics::Rect {
+                x: -GAME_SIZE,
+                y: -GAME_SIZE,
+                w: GAME_SIZE * 2.0,
+                h: GAME_SIZE * 2.0,
+            },
+            Color::new(0.6, 0.4, 0.1, 1.),
         )?;
 
         Ok(Renderer {
@@ -55,6 +70,7 @@ impl Renderer {
             ant_hill_mesh,
             pheromone_mesh,
             food_mesh,
+            map_mesh,
         })
     }
 
@@ -66,8 +82,14 @@ impl Renderer {
         canvas: &mut Canvas,
         ctx: &mut Context,
     ) -> GameResult {
+        canvas.draw(&self.map_mesh, DrawParam::from(vec2(0., 0.)));
+
         if render_state.draw_pheromones {
             self.draw_pheromones(simulation, canvas, ctx);
+        }
+
+        if render_state.draw_rays {
+            self.draw_rays(simulation, canvas, ctx);
         }
 
         self.draw_ants(simulation, canvas, ctx);
@@ -137,6 +159,27 @@ impl Renderer {
         canvas.draw_instanced_mesh(self.food_mesh.clone(), &instances, DrawParam::new());
     }
 
+    fn draw_rays(&self, simulation: &Simulation, canvas: &mut Canvas, ctx: &mut Context) {
+        let mb = &mut graphics::MeshBuilder::new();
+
+        for ant in simulation.ants() {
+            let pos = ant.pos();
+
+            for direction in ant.get_ray_directions() {
+                let point = *pos + direction * ANT_SEE_DISTANCE;
+
+                mb.line(
+                    &[vec2(pos.x, pos.y), vec2(point.x, point.y)],
+                    5.,
+                    Color::YELLOW,
+                )
+                .unwrap();
+            }
+        }
+
+        canvas.draw(&Mesh::from_data(ctx, mb.build()), DrawParam::new());
+    }
+
     fn draw_timings(
         &self,
         simulation: &Simulation,
@@ -151,6 +194,7 @@ steps: {}
 render time: {:?}
 update time: {:?}
     ant update time: {:?}
+    ant rays update time: {:?}
     neural network update time: {:?}
     keep ants update time: {:?}
     pheromone update time: {:?}
@@ -164,6 +208,7 @@ update time: {:?}
             timings.render,
             timings.update,
             simulation.timings().ant_updates,
+            simulation.timings().see_food,
             simulation.timings().neural_network_updates,
             simulation.timings().keep_ants,
             simulation.timings().pheromone_updates,
