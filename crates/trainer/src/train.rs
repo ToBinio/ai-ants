@@ -1,6 +1,11 @@
-use std::fs::{self};
+use std::{
+    fs,
+    io::{self, Write},
+    time::Instant,
+};
 
 use chrono::Local;
+use console::Term;
 use itertools::Itertools;
 use neural_network::NeuralNetwork;
 use rayon::prelude::*;
@@ -28,7 +33,12 @@ impl Trainer {
         Trainer { simulations }
     }
 
-    pub fn train(&mut self) {
+    pub fn train(&mut self) -> io::Result<()> {
+        let term = Term::stdout();
+        term.write_line("starting Training")?;
+
+        let start_time = Instant::now();
+
         let mut gen_count = 0;
 
         loop {
@@ -39,7 +49,14 @@ impl Trainer {
 
             Self::save_network(gen_count, score, &best_network);
 
-            println!("best score: {}", score);
+            term.clear_line()?;
+            term.write_line(&format!(
+                "gen({}) score: {} - {:?}",
+                gen_count,
+                score,
+                start_time.elapsed()
+            ))?;
+            term.move_cursor_up(1)?;
 
             self.simulations.clear();
 

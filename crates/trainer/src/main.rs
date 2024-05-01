@@ -31,10 +31,8 @@ fn main() {
 
     match cli.command {
         Commands::Train { count } => {
-            println!("Starting training!");
-
             let mut trainer = Trainer::new(count);
-            trainer.train()
+            trainer.train().unwrap()
         }
         Commands::Benchmark => {
             println!("Starting Benchmark!");
