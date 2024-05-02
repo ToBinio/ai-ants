@@ -15,6 +15,7 @@ use crate::STEPS_PER_SIMULATION;
 
 pub struct Trainer {
     simulations: Vec<Simulation>,
+    simulation_count: usize,
 }
 
 impl Trainer {
@@ -30,7 +31,10 @@ impl Trainer {
             ])))
         }
 
-        Trainer { simulations }
+        Trainer {
+            simulations,
+            simulation_count,
+        }
     }
 
     pub fn train(&mut self) -> io::Result<()> {
@@ -60,7 +64,7 @@ impl Trainer {
 
             self.simulations.clear();
 
-            for _ in 1..10 {
+            for _ in 1..self.simulation_count {
                 let mut neural_network = best_network.clone();
                 neural_network.mutate(0.1, -0.5..0.5);
                 self.simulations.push(Simulation::new(neural_network))
@@ -94,7 +98,7 @@ impl Trainer {
         let path_string = format!(
             "./training/{}-{}-{}.json",
             gen,
-            Local::now().format("%Y:%m:%d_%H:%M:%S"),
+            Local::now().format("%Y-%m-%d_%H-%M-%S"),
             score
         );
         let path = std::path::Path::new(&path_string);
