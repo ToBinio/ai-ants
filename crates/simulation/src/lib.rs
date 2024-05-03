@@ -37,6 +37,12 @@ pub struct Simulation {
     neural_network: NeuralNetwork,
 }
 
+impl Default for Simulation {
+    fn default() -> Self {
+        Simulation::new(NeuralNetwork::new(Simulation::default_network_size()))
+    }
+}
+
 pub struct Stats {
     pub step_count: usize,
     pub picked_up_food: usize,
@@ -56,6 +62,15 @@ pub struct Timings {
 }
 
 impl Simulation {
+    pub fn default_network_size() -> Vec<usize> {
+        vec![
+            NEURAL_NETWORK_INPUT_SIZE,
+            10,
+            7,
+            5,
+            NEURAL_NETWORK_OUTPUT_SIZE,
+        ]
+    }
     pub fn new(neural_network: NeuralNetwork) -> Simulation {
         assert_eq!(
             neural_network.get_input_size(),
@@ -161,10 +176,10 @@ impl Simulation {
 
     fn update_network(ants: &mut Vec<Ant>, neural_network: &NeuralNetwork, timings: &mut Timings) {
         let instant = Instant::now();
-        ants.iter_mut().for_each(|ant| {
+        for ant in ants {
             let values = neural_network.run(ant.get_neural_network_values());
             ant.set_neural_network_values(values);
-        });
+        }
         timings.neural_network_updates = instant.elapsed();
     }
 
@@ -180,13 +195,15 @@ impl Simulation {
 
     fn update_ants(ants: &mut Vec<Ant>, timings: &mut Timings) {
         let instant = Instant::now();
-        ants.iter_mut().for_each(|ant| ant.step());
+        for ant in ants {
+            ant.step()
+        }
         timings.ant_updates = instant.elapsed();
     }
 
     fn keep_ants(ants: &mut Vec<Ant>, timings: &mut Timings) {
         let instant = Instant::now();
-        ants.iter_mut().for_each(|ant| {
+        for ant in ants {
             if ant.pos().x > GAME_SIZE {
                 ant.pos_mut().x -= 10.;
                 ant.flip()
@@ -206,7 +223,7 @@ impl Simulation {
                 ant.pos_mut().y += 10.;
                 ant.flip()
             }
-        });
+        }
         timings.keep_ants = instant.elapsed();
     }
 
@@ -282,16 +299,36 @@ impl Simulation {
                         }
                     }
 
-                    possible_food
-                        .into_iter()
-                        .flatten()
-                        .filter_map(|food| {
-                            ray_inserect_circle(*food.pos(), FOOD_SIZE, *ant.pos(), ray_direction)
-                        })
-                        .filter(|distance| distance < &ANT_SEE_DISTANCE)
-                        .sorted_by(|a, b| a.total_cmp(&b))
-                        .next()
-                        .unwrap_or_else(|| -1.0)
+                    let mut nearest_food = None;
+
+                    for food in possible_food.into_iter().flatten() {
+                        let distance = food.pos().distance_squared(*ant.pos());
+
+                        if distance > ANT_SEE_DISTANCE {
+                            continue;
+                        }
+
+                        if let Some(nearest) = nearest_food {
+                            if nearest < distance {
+                                continue;
+                            }
+                        }
+
+                        let intersection =
+                            ray_inserect_circle(*food.pos(), FOOD_SIZE, *ant.pos(), ray_direction);
+
+                        if let Some(intersection) = intersection {
+                            if let Some(nearest) = nearest_food {
+                                if intersection < nearest {
+                                    nearest_food = Some(intersection)
+                                }
+                            } else {
+                                nearest_food = Some(intersection)
+                            }
+                        }
+                    }
+
+                    nearest_food.unwrap_or(-1.0)
                 })
                 .collect_vec();
 

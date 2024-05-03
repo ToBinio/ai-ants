@@ -70,22 +70,22 @@ impl Ant {
         self.carries_food = carries_food
     }
 
-    pub fn set_neural_network_values(&mut self, values: Vec<f64>) {
-        self.target_dir += values[0] as f32;
-        self.pheromon_color = (values[1] as f32, values[2] as f32, values[3] as f32)
+    pub fn set_neural_network_values(&mut self, values: Vec<f32>) {
+        self.target_dir += values[0];
+        self.pheromon_color = (values[1], values[2], values[3])
     }
 
-    pub fn get_neural_network_values(&self) -> Vec<f64> {
+    pub fn get_neural_network_values(&self) -> Vec<f32> {
         let mut values = vec![
-            (self.pos.x / GAME_SIZE) as f64,
-            (self.pos.y / GAME_SIZE) as f64,
-            (self.dir / PI * 2.) as f64,
-            (self.target_dir / PI * 2.) as f64,
+            (self.pos.x / GAME_SIZE),
+            (self.pos.y / GAME_SIZE),
+            (self.dir / PI * 2.),
+            (self.target_dir / PI * 2.),
             if self.carries_food { 1. } else { -1. },
         ];
 
         for ray in &self.rays {
-            values.push(*ray as f64);
+            values.push(*ray);
         }
 
         values

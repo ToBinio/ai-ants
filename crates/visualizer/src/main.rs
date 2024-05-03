@@ -36,15 +36,7 @@ fn main() {
             let reader = BufReader::new(file);
             serde_json::from_reader(reader).unwrap()
         })
-        .or_else(|| {
-            Some(NeuralNetwork::new(vec![
-                NEURAL_NETWORK_INPUT_SIZE,
-                10,
-                7,
-                5,
-                NEURAL_NETWORK_OUTPUT_SIZE,
-            ]))
-        })
+        .or_else(|| Some(NeuralNetwork::new(Simulation::default_network_size())))
         .unwrap();
 
     let (mut ctx, event_loop) = ContextBuilder::new("ai ants", "ToBinio")
