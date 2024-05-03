@@ -62,12 +62,17 @@ impl NeuralNetwork {
                 .nodes
                 .iter()
                 .map(|node| {
-                    //todo activation function
-                    node.weights
+                    //todo bias (values added to node sum)
+                    let sum = node
+                        .weights
                         .iter()
                         .enumerate()
                         .map(|(index, weight)| current_values[index] * weight)
-                        .sum()
+                        .sum::<f64>();
+
+                    //todo more performant sigmoid
+                    //sigmoid
+                    1. / (1. + std::f64::consts::E.powf(-sum))
                 })
                 .collect();
         }

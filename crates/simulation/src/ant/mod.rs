@@ -48,6 +48,11 @@ impl Ant {
         &self.pos
     }
 
+    //todo maybe dont... just add some modification function
+    pub fn pos_mut(&mut self) -> &mut Vec2 {
+        &mut self.pos
+    }
+
     pub fn dir(&self) -> f32 {
         self.dir
     }
