@@ -15,7 +15,7 @@ struct Layer {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Node {
-    weights: Vec<f64>,
+    weights: Vec<f32>,
 }
 
 impl NeuralNetwork {
@@ -54,7 +54,7 @@ impl NeuralNetwork {
         self.layers[self.layers.len() - 1].nodes.len()
     }
 
-    pub fn run(&self, input: Vec<f64>) -> Vec<f64> {
+    pub fn run(&self, input: Vec<f32>) -> Vec<f32> {
         let mut current_values = input;
 
         for layer in self.layers.iter().skip(1) {
@@ -62,12 +62,16 @@ impl NeuralNetwork {
                 .nodes
                 .iter()
                 .map(|node| {
-                    //todo activation function
-                    node.weights
-                        .iter()
-                        .enumerate()
-                        .map(|(index, weight)| current_values[index] * weight)
-                        .sum()
+                    //todo bias (values added to node sum)
+
+                    let mut sum = 0.;
+
+                    for index in 0..node.weights.len() {
+                        sum += node.weights[index] * current_values[index]
+                    }
+
+                    //sigmoid
+                    1. / (1. + f32::exp(-sum))
                 })
                 .collect();
         }
@@ -75,7 +79,7 @@ impl NeuralNetwork {
         current_values
     }
 
-    pub fn mutate(&mut self, mutation_chance: f32, range: Range<f64>) {
+    pub fn mutate(&mut self, mutation_chance: f32, range: Range<f32>) {
         let mut rng = thread_rng();
 
         for layer in &mut self.layers {

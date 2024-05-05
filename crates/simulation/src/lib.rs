@@ -2,32 +2,45 @@ use crate::ant::{Ant, ANT_PICK_UP_DISTANCE};
 use crate::pheromone::Pheromone;
 
 use crate::food::Food;
+use crate::grid::Grid;
+use ant::{ANT_RAY_COUNT, ANT_SEE_DISTANCE};
 use glam::vec2;
+use itertools::Itertools;
+use math::ray_inserect_circle;
 use neural_network::NeuralNetwork;
 use rand::{thread_rng, Rng};
 use std::time::{Duration, Instant};
 
-mod ant;
+pub mod ant;
 mod food;
+mod grid;
+mod math;
 mod pheromone;
 
 const TICKS_UNTIL_PHEROMONE: usize = 10;
 pub const ANT_HILL_RADIUS: f32 = 50.;
 pub const GAME_SIZE: f32 = 500.;
+pub const FOOD_SIZE: f32 = 7.;
 
-pub const NEURAL_NETWORK_INPUT_SIZE: usize = 5;
+pub const NEURAL_NETWORK_INPUT_SIZE: usize = 5 + ANT_RAY_COUNT;
 pub const NEURAL_NETWORK_OUTPUT_SIZE: usize = 4;
 
 pub struct Simulation {
     ants: Vec<Ant>,
-    pheromones: Vec<Pheromone>,
-    foods: Vec<Food>,
+    pheromones: Grid<Pheromone>,
+    foods: Grid<Food>,
 
     ticks_until_pheromone: usize,
     timings: Timings,
     stats: Stats,
 
     neural_network: NeuralNetwork,
+}
+
+impl Default for Simulation {
+    fn default() -> Self {
+        Simulation::new(NeuralNetwork::new(Simulation::default_network_size()))
+    }
 }
 
 pub struct Stats {
@@ -45,9 +58,19 @@ pub struct Timings {
     pub pheromone_remove: Duration,
     pub pick_up_food: Duration,
     pub drop_of_food: Duration,
+    pub see_food: Duration,
 }
 
 impl Simulation {
+    pub fn default_network_size() -> Vec<usize> {
+        vec![
+            NEURAL_NETWORK_INPUT_SIZE,
+            10,
+            7,
+            5,
+            NEURAL_NETWORK_OUTPUT_SIZE,
+        ]
+    }
     pub fn new(neural_network: NeuralNetwork) -> Simulation {
         assert_eq!(
             neural_network.get_input_size(),
@@ -66,19 +89,24 @@ impl Simulation {
             ants.push(Ant::random());
         }
 
-        let mut foods = vec![];
+        let mut foods = Grid::new(
+            (GAME_SIZE * 2. / ANT_SEE_DISTANCE).ceil() as usize,
+            GAME_SIZE,
+        );
         let mut rng = thread_rng();
 
         for _ in 0..1000 {
-            foods.push(Food::new(vec2(
-                rng.gen_range(100.0..200.0),
-                rng.gen_range(100.0..200.0),
-            )))
+            let pos = vec2(rng.gen_range(100.0..200.0), rng.gen_range(100.0..200.0));
+
+            foods.insert(&pos, Food::new(pos));
         }
 
         Simulation {
             ants,
-            pheromones: vec![],
+            pheromones: Grid::new(
+                (GAME_SIZE * 2. / ANT_SEE_DISTANCE).ceil() as usize,
+                GAME_SIZE,
+            ),
             foods,
             ticks_until_pheromone: TICKS_UNTIL_PHEROMONE,
             timings: Timings {
@@ -90,6 +118,7 @@ impl Simulation {
                 pheromone_remove: Default::default(),
                 pick_up_food: Default::default(),
                 drop_of_food: Default::default(),
+                see_food: Default::default(),
             },
             stats: Stats {
                 step_count: 0,
@@ -107,14 +136,14 @@ impl Simulation {
         &self.ants
     }
 
-    pub fn pheromones(&self) -> &Vec<Pheromone> {
-        &self.pheromones
+    pub fn pheromones(&self) -> Vec<&Pheromone> {
+        self.pheromones.all()
     }
     pub fn neural_network(&self) -> &NeuralNetwork {
         &self.neural_network
     }
-    pub fn foods(&self) -> &Vec<Food> {
-        &self.foods
+    pub fn foods(&self) -> Vec<&Food> {
+        self.foods.all()
     }
     pub fn stats(&self) -> &Stats {
         &self.stats
@@ -125,6 +154,7 @@ impl Simulation {
 
         Simulation::update_network(&mut self.ants, &self.neural_network, &mut self.timings);
         Simulation::update_ants(&mut self.ants, &mut self.timings);
+        Simulation::see_food(&mut self.ants, &self.foods, &mut self.timings);
         Simulation::keep_ants(&mut self.ants, &mut self.timings);
 
         if self.ticks_until_pheromone == 0 {
@@ -146,16 +176,16 @@ impl Simulation {
 
     fn update_network(ants: &mut Vec<Ant>, neural_network: &NeuralNetwork, timings: &mut Timings) {
         let instant = Instant::now();
-        ants.iter_mut().for_each(|ant| {
+        for ant in ants {
             let values = neural_network.run(ant.get_neural_network_values());
             ant.set_neural_network_values(values);
-        });
+        }
         timings.neural_network_updates = instant.elapsed();
     }
 
-    fn update_pheromones(pheromones: &mut Vec<Pheromone>, timings: &mut Timings) {
+    fn update_pheromones(pheromones: &mut Grid<Pheromone>, timings: &mut Timings) {
         let instant = Instant::now();
-        pheromones.iter_mut().for_each(|pheromone| pheromone.step());
+        pheromones.for_each(|pheromone| pheromone.step());
         timings.pheromone_updates = instant.elapsed();
 
         let instant = Instant::now();
@@ -165,49 +195,66 @@ impl Simulation {
 
     fn update_ants(ants: &mut Vec<Ant>, timings: &mut Timings) {
         let instant = Instant::now();
-        ants.iter_mut().for_each(|ant| ant.step());
+        for ant in ants {
+            ant.step()
+        }
         timings.ant_updates = instant.elapsed();
     }
 
     fn keep_ants(ants: &mut Vec<Ant>, timings: &mut Timings) {
         let instant = Instant::now();
-        ants.iter_mut().for_each(|ant| {
-            if ant.pos().x > GAME_SIZE
-                || ant.pos().x < -GAME_SIZE
-                || ant.pos().y > GAME_SIZE
-                || ant.pos().y < -GAME_SIZE
-            {
+        for ant in ants {
+            if ant.pos().x > GAME_SIZE {
+                ant.pos_mut().x -= 10.;
                 ant.flip()
             }
-        });
+
+            if ant.pos().x < -GAME_SIZE {
+                ant.pos_mut().x += 10.;
+                ant.flip()
+            }
+
+            if ant.pos().y > GAME_SIZE {
+                ant.pos_mut().y -= 10.;
+                ant.flip()
+            }
+
+            if ant.pos().y < -GAME_SIZE {
+                ant.pos_mut().y += 10.;
+                ant.flip()
+            }
+        }
         timings.keep_ants = instant.elapsed();
     }
 
-    fn spawn_pheromones(pheromones: &mut Vec<Pheromone>, ants: &Vec<Ant>, timings: &mut Timings) {
+    fn spawn_pheromones(pheromones: &mut Grid<Pheromone>, ants: &Vec<Ant>, timings: &mut Timings) {
         let instant = Instant::now();
 
-        pheromones.reserve(ants.len());
         for ant in ants {
-            pheromones.push(ant.new_pheromone())
+            pheromones.insert(ant.pos(), ant.new_pheromone())
         }
         timings.pheromone_spawn = instant.elapsed();
     }
 
     fn pick_up_food(
         ants: &mut [Ant],
-        foods: &mut Vec<Food>,
+        foods: &mut Grid<Food>,
         timings: &mut Timings,
         stats: &mut Stats,
     ) {
         let instant = Instant::now();
 
         for ant in ants.iter_mut().filter(|ant| !ant.carries_food()) {
+            //todo also check in surrounding cells since food does not have a 0 big radius
+            let index = foods.indexes_from_pos(ant.pos());
+            let foods = foods.get_mut(index);
+
             let mut picked_up_food = None;
 
             for (index, food) in foods.iter().enumerate() {
                 let distance =
-                    vec2(food.pos().x - ant.pos().x, food.pos().y - ant.pos().y).length();
-                if distance < ANT_PICK_UP_DISTANCE {
+                    vec2(food.pos().x - ant.pos().x, food.pos().y - ant.pos().y).length_squared();
+                if distance < ANT_PICK_UP_DISTANCE * ANT_PICK_UP_DISTANCE {
                     stats.picked_up_food += 1;
                     picked_up_food = Some(index);
                     break;
@@ -223,12 +270,80 @@ impl Simulation {
         timings.pick_up_food = instant.elapsed();
     }
 
+    fn see_food(ants: &mut [Ant], foods: &Grid<Food>, timings: &mut Timings) {
+        let instant = Instant::now();
+
+        for ant in ants {
+            let ray_values = ant
+                .get_ray_directions()
+                .into_iter()
+                .map(|ray_direction| {
+                    let (x_index, y_index) = foods.indexes_from_pos(ant.pos());
+
+                    let mut possible_food = vec![];
+
+                    for x in -1..1_isize {
+                        for y in -1..1_isize {
+                            let x = x_index as isize + x;
+                            let y = y_index as isize + y;
+
+                            if x < 0
+                                || x >= foods.size() as isize
+                                || y < 0
+                                || y >= foods.size() as isize
+                            {
+                                continue;
+                            }
+
+                            possible_food.push(foods.get((x as usize, y as usize)));
+                        }
+                    }
+
+                    let mut nearest_food = None;
+
+                    for food in possible_food.into_iter().flatten() {
+                        let distance = food.pos().distance_squared(*ant.pos());
+
+                        if distance > ANT_SEE_DISTANCE {
+                            continue;
+                        }
+
+                        if let Some(nearest) = nearest_food {
+                            if nearest < distance {
+                                continue;
+                            }
+                        }
+
+                        let intersection =
+                            ray_inserect_circle(*food.pos(), FOOD_SIZE, *ant.pos(), ray_direction);
+
+                        if let Some(intersection) = intersection {
+                            if let Some(nearest) = nearest_food {
+                                if intersection < nearest {
+                                    nearest_food = Some(intersection)
+                                }
+                            } else {
+                                nearest_food = Some(intersection)
+                            }
+                        }
+                    }
+
+                    nearest_food.unwrap_or(-1.0)
+                })
+                .collect_vec();
+
+            ant.set_rays(ray_values);
+        }
+
+        timings.see_food = instant.elapsed();
+    }
+
     fn drop_of_food(ants: &mut [Ant], timings: &mut Timings, stats: &mut Stats) {
         let instant = Instant::now();
 
         ants.iter_mut()
             .filter(|ant| ant.carries_food())
-            .filter(|ant| ant.pos().length() < ANT_HILL_RADIUS)
+            .filter(|ant| ant.pos().length_squared() < ANT_HILL_RADIUS * ANT_HILL_RADIUS)
             .for_each(|ant| {
                 stats.dropped_of_food += 1;
                 ant.set_carries_food(false)

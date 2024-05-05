@@ -36,14 +36,7 @@ fn main() {
             let reader = BufReader::new(file);
             serde_json::from_reader(reader).unwrap()
         })
-        .or_else(|| {
-            Some(NeuralNetwork::new(vec![
-                NEURAL_NETWORK_INPUT_SIZE,
-                5,
-                5,
-                NEURAL_NETWORK_OUTPUT_SIZE,
-            ]))
-        })
+        .or_else(|| Some(NeuralNetwork::new(Simulation::default_network_size())))
         .unwrap();
 
     let (mut ctx, event_loop) = ContextBuilder::new("ai ants", "ToBinio")
@@ -75,6 +68,7 @@ struct Timings {
 struct RenderState {
     draw_timings: bool,
     draw_pheromones: bool,
+    draw_rays: bool,
 }
 
 impl SimulationVisualizer {
@@ -88,6 +82,7 @@ impl SimulationVisualizer {
             render_state: RenderState {
                 draw_timings: true,
                 draw_pheromones: false,
+                draw_rays: false,
             },
             timings: Timings {
                 render: Default::default(),
@@ -147,9 +142,12 @@ impl EventHandler for SimulationVisualizer {
                 VirtualKeyCode::P => {
                     self.render_state.draw_pheromones = !self.render_state.draw_pheromones
                 }
+
                 VirtualKeyCode::S => {
                     self.render_state.draw_timings = !self.render_state.draw_timings
                 }
+
+                VirtualKeyCode::R => self.render_state.draw_rays = !self.render_state.draw_rays,
                 _ => {}
             }
         }
