@@ -71,7 +71,7 @@ impl Ant {
     }
 
     pub fn set_neural_network_values(&mut self, values: Vec<f32>) {
-        self.target_dir += values[0];
+        self.target_dir += values[0] / 100.;
         self.pheromon_color = (values[1], values[2], values[3])
     }
 

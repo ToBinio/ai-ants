@@ -71,7 +71,7 @@ impl NeuralNetwork {
                     }
 
                     //sigmoid
-                    1. / (1. + f32::exp(-sum))
+                    (1. / (1. + f32::exp(-sum))) * 2. - 1.
                 })
                 .collect();
         }
