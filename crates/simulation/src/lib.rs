@@ -63,13 +63,7 @@ pub struct Timings {
 
 impl Simulation {
     pub fn default_network_size() -> Vec<usize> {
-        vec![
-            NEURAL_NETWORK_INPUT_SIZE,
-            10,
-            7,
-            5,
-            NEURAL_NETWORK_OUTPUT_SIZE,
-        ]
+        vec![NEURAL_NETWORK_INPUT_SIZE, 7, 5, NEURAL_NETWORK_OUTPUT_SIZE]
     }
     pub fn new(neural_network: NeuralNetwork) -> Simulation {
         assert_eq!(
@@ -96,7 +90,7 @@ impl Simulation {
         let mut rng = thread_rng();
 
         for _ in 0..1000 {
-            let pos = vec2(rng.gen_range(100.0..200.0), rng.gen_range(100.0..200.0));
+            let pos = vec2(rng.gen_range(300.0..400.0), rng.gen_range(300.0..400.0));
 
             foods.insert(&pos, Food::new(pos));
         }
