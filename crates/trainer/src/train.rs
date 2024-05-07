@@ -1,20 +1,17 @@
-use std::{
-    fs,
-    io::{self},
-    time::Instant,
-};
+use std::{fs, io, time::Instant};
 
 use chrono::Local;
 use console::Term;
-use itertools::Itertools;
+use fancy_duration::AsFancyDuration;
 use neural_network::NeuralNetwork;
+use rand::{thread_rng, Rng};
 use rayon::prelude::*;
 use simulation::Simulation;
 
 use crate::STEPS_PER_SIMULATION;
 
 pub struct Trainer {
-    simulations: Vec<Simulation>,
+    simulations: Vec<(Simulation, usize)>,
     simulation_count: usize,
 }
 
@@ -23,7 +20,7 @@ impl Trainer {
         let mut simulations = vec![];
 
         for _ in 0..simulation_count {
-            simulations.push(Simulation::default())
+            simulations.push((Simulation::default(), 0))
         }
 
         Trainer {
@@ -43,46 +40,79 @@ impl Trainer {
         loop {
             gen_count += 1;
             self.run();
-            let (best, score) = self.get_best();
-            let best_network = best.neural_network().clone();
 
-            Self::save_network(gen_count, score, &best_network);
+            for sim in &mut self.simulations {
+                sim.1 = Self::eval(&sim.0)
+            }
+
+            self.simulations.sort_by(|a, b| b.1.cmp(&a.1));
+
+            Self::save_network(
+                gen_count,
+                self.simulations[0].1,
+                self.simulations[0].0.neural_network(),
+            );
 
             term.clear_line()?;
             term.write_line(&format!(
-                "gen({}) score: {} - {:?}",
+                "gen({}) score: {} avg({}) - {}",
                 gen_count,
-                score,
-                start_time.elapsed()
+                self.simulations[0].1,
+                self.simulations
+                    .iter()
+                    .map(|(_, score)| *score)
+                    .sum::<usize>()
+                    / self.simulations.len(),
+                start_time.elapsed().fancy_duration().truncate(2)
             ))?;
             term.move_cursor_up(1)?;
 
-            self.simulations.clear();
+            let mut new_simulations = vec![];
 
-            for _ in 1..self.simulation_count {
-                let mut neural_network = best_network.clone();
-                neural_network.mutate(0.2, -0.5..0.5);
-                self.simulations.push(Simulation::new(neural_network))
+            let top_30 = (self.simulation_count as f32 * 0.3).ceil() as usize;
+
+            // keep top 30% as is
+            for i in 0..top_30 {
+                new_simulations.push((
+                    Simulation::new(self.simulations[i].0.neural_network().clone()),
+                    0,
+                ));
             }
-            self.simulations.push(Simulation::new(best_network));
+
+            let mut network_chances = vec![];
+            let mut last_chance = 0;
+
+            for i in 0..self.simulation_count {
+                last_chance += self.simulations[i].1;
+                network_chances.push((last_chance, self.simulations[i].0.neural_network().clone()));
+            }
+
+            let mut rng = thread_rng();
+
+            'outer: for _ in top_30..self.simulation_count {
+                let random = rng.gen_range(0..last_chance);
+
+                for (chance, network) in &network_chances {
+                    if &random <= chance {
+                        let mut neural_network = network.clone();
+                        neural_network.mutate(0.2, -0.5..0.5);
+                        new_simulations.push((Simulation::new(neural_network), 0));
+
+                        continue 'outer;
+                    }
+                }
+            }
+
+            self.simulations = new_simulations;
         }
     }
 
     fn run(&mut self) {
         self.simulations.par_iter_mut().for_each(|simulation| {
             for _ in 0..STEPS_PER_SIMULATION {
-                simulation.step();
+                simulation.0.step();
             }
         });
-    }
-
-    fn get_best(&self) -> (&Simulation, usize) {
-        self.simulations
-            .iter()
-            .map(|simulation| (simulation, Self::eval(simulation)))
-            .sorted_by(|a, b| b.1.cmp(&a.1))
-            .next()
-            .unwrap()
     }
 
     fn eval(simulation: &Simulation) -> usize {

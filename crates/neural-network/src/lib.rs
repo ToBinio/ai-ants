@@ -15,6 +15,7 @@ struct Layer {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct Node {
+    bias: f32,
     weights: Vec<f32>,
 }
 
@@ -37,7 +38,7 @@ impl NeuralNetwork {
                     }
                 }
 
-                nodes.push(Node { weights })
+                nodes.push(Node { weights, bias: 0. })
             }
 
             layers.push(Layer { nodes });
@@ -62,13 +63,13 @@ impl NeuralNetwork {
                 .nodes
                 .iter()
                 .map(|node| {
-                    //todo bias (values added to node sum)
-
                     let mut sum = 0.;
 
                     for (index, weight) in node.weights.iter().enumerate() {
                         sum += weight * current_values[index]
                     }
+
+                    sum += node.bias;
 
                     //sigmoid
                     (1. / (1. + f32::exp(-sum))) * 2. - 1.
@@ -84,6 +85,10 @@ impl NeuralNetwork {
 
         for layer in &mut self.layers {
             for node in &mut layer.nodes {
+                if rng.gen::<f32>() < mutation_chance {
+                    node.bias += rng.gen_range((range.start / 2.0)..(range.end / 2.0));
+                }
+
                 for index in 0..node.weights.len() {
                     if rng.gen::<f32>() < mutation_chance {
                         node.weights[index] += rng.gen_range(range.clone());
