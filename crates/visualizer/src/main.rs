@@ -11,7 +11,7 @@ use ggez::input::keyboard::KeyInput;
 use ggez::winit::event::VirtualKeyCode;
 use ggez::{Context, ContextBuilder, GameError, GameResult};
 use neural_network::NeuralNetwork;
-use simulation::{Simulation, NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE};
+use simulation::Simulation;
 use std::time::{Duration, Instant};
 
 mod renderer;

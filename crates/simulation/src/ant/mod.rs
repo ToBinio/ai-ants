@@ -28,19 +28,13 @@ impl Ant {
     pub fn random() -> Ant {
         let mut rng = thread_rng();
 
-        let mut rays = vec![];
-
-        for _ in 0..ANT_RAY_COUNT {
-            rays.push(0.);
-        }
-
         Ant {
             pos: vec2(0.0, 0.0),
             dir: rng.gen_range(-(2. * PI)..(2. * PI)),
             target_dir: rng.gen_range(-(2. * PI)..(2. * PI)),
             carries_food: false,
             pheromon_color: (0.0, 0.0, 0.0),
-            rays,
+            rays: vec![0.; ANT_RAY_COUNT],
         }
     }
 

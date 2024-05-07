@@ -66,8 +66,8 @@ impl NeuralNetwork {
 
                     let mut sum = 0.;
 
-                    for index in 0..node.weights.len() {
-                        sum += node.weights[index] * current_values[index]
+                    for (index, weight) in node.weights.iter().enumerate() {
+                        sum += weight * current_values[index]
                     }
 
                     //sigmoid

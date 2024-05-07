@@ -1,7 +1,6 @@
 use crate::{RenderState, Timings};
 use ggez::glam::vec2;
 use ggez::graphics::{Canvas, Color, DrawParam, InstanceArray, Mesh, Text, TextFragment};
-use ggez::winit::window::ResizeDirection;
 use ggez::{graphics, Context, GameError, GameResult};
 use simulation::ant::ANT_SEE_DISTANCE;
 use simulation::{Simulation, ANT_HILL_RADIUS, FOOD_SIZE, GAME_SIZE};

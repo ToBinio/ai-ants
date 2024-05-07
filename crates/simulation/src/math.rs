@@ -9,7 +9,7 @@ pub fn ray_inserect_circle(
 ) -> Option<f32> {
     let e_vec = circle_center - ray_center;
 
-    let a = e_vec.dot(ray_direction.clone());
+    let a = e_vec.dot(ray_direction);
 
     let e_length = e_vec.length_squared();
 

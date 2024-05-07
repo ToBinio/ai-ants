@@ -26,12 +26,12 @@ impl<T> Grid<T> {
         self.size
     }
 
-    pub fn for_each<F>(&mut self, mut f: F)
+    pub fn for_each<F>(&mut self, f: F)
     where
         Self: Sized,
         F: FnMut(&mut T),
     {
-        self.data.iter_mut().flatten().for_each(|item| f(item))
+        self.data.iter_mut().flatten().for_each(f)
     }
 
     pub fn retain<F>(&mut self, f: F)

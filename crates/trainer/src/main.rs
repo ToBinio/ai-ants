@@ -1,8 +1,5 @@
 use crate::benchmark::benchmark;
 use clap::{Parser, Subcommand};
-use neural_network::NeuralNetwork;
-use simulation::{Simulation, NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE};
-use std::time::Instant;
 
 use crate::train::Trainer;
 
