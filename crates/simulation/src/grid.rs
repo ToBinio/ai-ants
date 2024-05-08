@@ -1,4 +1,5 @@
-use glam::Vec2;
+use crate::math::circle_intersects_rect;
+use glam::{vec2, Vec2};
 use itertools::Itertools;
 
 pub struct Grid<T> {
@@ -20,10 +21,6 @@ impl<T> Grid<T> {
             size,
             width: half_width,
         }
-    }
-
-    pub fn size(&self) -> usize {
-        self.size
     }
 
     pub fn for_each<F>(&mut self, f: F)
@@ -54,12 +51,44 @@ impl<T> Grid<T> {
         self.data.get_mut(y * self.size + x).unwrap().push(val);
     }
 
-    //todo create get with gets a radius and returns all data from included cells...
-    pub fn get(&self, indexes: (usize, usize)) -> &Vec<T> {
+    pub fn get(&self, pos: Vec2, radius: f32) -> Vec<(usize, usize)> {
+        let width_per_tile = (self.width * 2.) / self.size as f32;
+
+        let min_x =
+            (((pos.x - radius / 2.0 + self.width) / width_per_tile).floor() as usize).max(0);
+        let max_x = (((pos.x + radius / 2.0 + self.width) / width_per_tile).ceil() as usize)
+            .min(self.size - 1);
+
+        let min_y =
+            (((pos.y - radius / 2.0 + self.width) / width_per_tile).floor() as usize).max(0);
+        let max_y = (((pos.y + radius / 2.0 + self.width) / width_per_tile).ceil() as usize)
+            .min(self.size - 1);
+
+        let mut elements = vec![];
+
+        for x in min_x..=max_x {
+            for y in min_y..=max_y {
+                let tile_x = x as f32 * width_per_tile + width_per_tile / 2.0 - self.width;
+                let tile_y = y as f32 * width_per_tile + width_per_tile / 2.0 - self.width;
+
+                if self.get_from_index((x, y)).len() == 0 {
+                    continue;
+                }
+
+                if circle_intersects_rect(pos, radius, vec2(tile_x, tile_y), width_per_tile) {
+                    elements.push((x, y));
+                }
+            }
+        }
+
+        elements
+    }
+
+    pub fn get_from_index(&self, indexes: (usize, usize)) -> &Vec<T> {
         &self.data[indexes.1 * self.size + indexes.0]
     }
 
-    pub fn get_mut(&mut self, indexes: (usize, usize)) -> &mut Vec<T> {
+    pub fn get_from_index_mut(&mut self, indexes: (usize, usize)) -> &mut Vec<T> {
         &mut self.data[indexes.1 * self.size + indexes.0]
     }
 
@@ -99,9 +128,7 @@ mod tests {
 
         grid.insert(&vec2(20.0, 20.0), 5);
 
-        let (x, y) = grid.indexes_from_pos(&vec2(20., 20.));
-
-        let data = grid.get((x, y));
-        assert_eq!(data.len(), 1);
+        let data = grid.get(vec2(20., 20.), 1.);
+        assert_eq!(data.len(), 4);
     }
 }

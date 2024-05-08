@@ -83,10 +83,7 @@ impl Simulation {
             ants.push(Ant::random());
         }
 
-        let mut foods = Grid::new(
-            (GAME_SIZE * 2. / ANT_SEE_DISTANCE).ceil() as usize,
-            GAME_SIZE,
-        );
+        let mut foods = Grid::new(20, GAME_SIZE);
         let mut rng = thread_rng();
 
         for _ in 0..1000 {
@@ -97,10 +94,7 @@ impl Simulation {
 
         Simulation {
             ants,
-            pheromones: Grid::new(
-                (GAME_SIZE * 2. / ANT_SEE_DISTANCE).ceil() as usize,
-                GAME_SIZE,
-            ),
+            pheromones: Grid::new(20, GAME_SIZE),
             foods,
             ticks_until_pheromone: TICKS_UNTIL_PHEROMONE,
             timings: Timings {
@@ -239,25 +233,25 @@ impl Simulation {
         let instant = Instant::now();
 
         for ant in ants.iter_mut().filter(|ant| !ant.carries_food()) {
-            //todo also check in surrounding cells since food does not have a 0 big radius
-            let index = foods.indexes_from_pos(ant.pos());
-            let foods = foods.get_mut(index);
+            for index in foods.get(*ant.pos(), ANT_PICK_UP_DISTANCE) {
+                let foods = foods.get_from_index_mut(index);
 
-            let mut picked_up_food = None;
+                let mut picked_up_food = None;
 
-            for (index, food) in foods.iter().enumerate() {
-                let distance =
-                    vec2(food.pos().x - ant.pos().x, food.pos().y - ant.pos().y).length_squared();
-                if distance < ANT_PICK_UP_DISTANCE * ANT_PICK_UP_DISTANCE {
-                    stats.picked_up_food += 1;
-                    picked_up_food = Some(index);
-                    break;
+                for (index, food) in foods.iter().enumerate() {
+                    let distance = vec2(food.pos().x - ant.pos().x, food.pos().y - ant.pos().y)
+                        .length_squared();
+                    if distance < ANT_PICK_UP_DISTANCE * ANT_PICK_UP_DISTANCE {
+                        stats.picked_up_food += 1;
+                        picked_up_food = Some(index);
+                        break;
+                    }
                 }
-            }
 
-            if let Some(index) = picked_up_food {
-                ant.set_carries_food(true);
-                foods.remove(index);
+                if let Some(index) = picked_up_food {
+                    ant.set_carries_food(true);
+                    foods.remove(index);
+                }
             }
         }
 
@@ -272,30 +266,15 @@ impl Simulation {
                 .get_ray_directions()
                 .into_iter()
                 .map(|ray_direction| {
-                    let (x_index, y_index) = foods.indexes_from_pos(ant.pos());
-
-                    let mut possible_food = vec![];
-
-                    for x in -1..1_isize {
-                        for y in -1..1_isize {
-                            let x = x_index as isize + x;
-                            let y = y_index as isize + y;
-
-                            if x < 0
-                                || x >= foods.size() as isize
-                                || y < 0
-                                || y >= foods.size() as isize
-                            {
-                                continue;
-                            }
-
-                            possible_food.push(foods.get((x as usize, y as usize)));
-                        }
-                    }
+                    let possible_food = foods.get(*ant.pos(), ANT_SEE_DISTANCE);
 
                     let mut nearest_food = None;
 
-                    for food in possible_food.into_iter().flatten() {
+                    for food in possible_food
+                        .into_iter()
+                        .map(|index| foods.get_from_index(index))
+                        .flatten()
+                    {
                         let distance = food.pos().distance_squared(*ant.pos());
 
                         if distance > ANT_SEE_DISTANCE {

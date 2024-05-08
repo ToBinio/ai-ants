@@ -35,6 +35,31 @@ pub fn ray_inserect_circle(
     Some(result)
 }
 
+pub fn circle_intersects_rect(
+    circle_center: Vec2,
+    circle_radius: f32,
+    rect_center: Vec2,
+    rect_size: f32,
+) -> bool {
+    let x = (circle_center.x - rect_center.x).abs();
+    let y = (circle_center.y - rect_center.y).abs();
+
+    if x > (rect_size / 2.0 + circle_radius) || y > (rect_size / 2.0 + circle_radius) {
+        return false;
+    }
+
+    if x <= (rect_size / 2.0) || y <= (rect_size / 2.0) {
+        return true;
+    }
+
+    let x = x - rect_size / 2.0;
+    let y = y - rect_size / 2.0;
+
+    let corner_distance_sq = x * x + y * y;
+
+    return corner_distance_sq <= (circle_radius * circle_radius);
+}
+
 #[cfg(test)]
 mod tests {
     use glam::vec2;
