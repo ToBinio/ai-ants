@@ -83,10 +83,10 @@ impl Simulation {
             ants.push(Ant::random());
         }
 
-        let mut foods = Grid::new(20, GAME_SIZE);
+        let mut foods = Grid::new(25, GAME_SIZE);
         let mut rng = thread_rng();
 
-        for _ in 0..1000 {
+        for _ in 0..500 {
             let pos = vec2(rng.gen_range(300.0..400.0), rng.gen_range(300.0..400.0));
 
             foods.insert(&pos, Food::new(pos));
@@ -94,7 +94,7 @@ impl Simulation {
 
         Simulation {
             ants,
-            pheromones: Grid::new(20, GAME_SIZE),
+            pheromones: Grid::new(25, GAME_SIZE),
             foods,
             ticks_until_pheromone: TICKS_UNTIL_PHEROMONE,
             timings: Timings {
@@ -142,7 +142,7 @@ impl Simulation {
 
         Simulation::update_network(&mut self.ants, &self.neural_network, &mut self.timings);
         Simulation::update_ants(&mut self.ants, &mut self.timings);
-        Simulation::see_food(&mut self.ants, &self.foods, &mut self.timings);
+        Simulation::see_food(&mut self.ants, &mut self.foods, &mut self.timings);
         Simulation::keep_ants(&mut self.ants, &mut self.timings);
 
         if self.ticks_until_pheromone == 0 {
@@ -173,7 +173,7 @@ impl Simulation {
 
     fn update_pheromones(pheromones: &mut Grid<Pheromone>, timings: &mut Timings) {
         let instant = Instant::now();
-        pheromones.for_each(|pheromone| pheromone.step());
+        pheromones.for_each_all(|pheromone| pheromone.step());
         timings.pheromone_updates = instant.elapsed();
 
         let instant = Instant::now();
@@ -233,9 +233,7 @@ impl Simulation {
         let instant = Instant::now();
 
         for ant in ants.iter_mut().filter(|ant| !ant.carries_food()) {
-            for index in foods.get(*ant.pos(), ANT_PICK_UP_DISTANCE) {
-                let foods = foods.get_from_index_mut(index);
-
+            foods.for_each(*ant.pos(), ANT_PICK_UP_DISTANCE, |foods| {
                 let mut picked_up_food = None;
 
                 for (index, food) in foods.iter().enumerate() {
@@ -252,13 +250,13 @@ impl Simulation {
                     ant.set_carries_food(true);
                     foods.remove(index);
                 }
-            }
+            });
         }
 
         timings.pick_up_food = instant.elapsed();
     }
 
-    fn see_food(ants: &mut [Ant], foods: &Grid<Food>, timings: &mut Timings) {
+    fn see_food(ants: &mut [Ant], foods: &mut Grid<Food>, timings: &mut Timings) {
         let instant = Instant::now();
 
         for ant in ants {
@@ -266,40 +264,40 @@ impl Simulation {
                 .get_ray_directions()
                 .into_iter()
                 .map(|ray_direction| {
-                    let possible_food = foods.get(*ant.pos(), ANT_SEE_DISTANCE);
-
                     let mut nearest_food = None;
 
-                    for food in possible_food
-                        .into_iter()
-                        .map(|index| foods.get_from_index(index))
-                        .flatten()
-                    {
-                        let distance = food.pos().distance_squared(*ant.pos());
+                    foods.for_each(*ant.pos(), ANT_SEE_DISTANCE, |foods| {
+                        for food in foods {
+                            let distance = food.pos().distance_squared(*ant.pos());
 
-                        if distance > ANT_SEE_DISTANCE {
-                            continue;
-                        }
-
-                        if let Some(nearest) = nearest_food {
-                            if nearest < distance {
+                            if distance > ANT_SEE_DISTANCE {
                                 continue;
                             }
-                        }
 
-                        let intersection =
-                            ray_inserect_circle(*food.pos(), FOOD_SIZE, *ant.pos(), ray_direction);
-
-                        if let Some(intersection) = intersection {
                             if let Some(nearest) = nearest_food {
-                                if intersection < nearest {
+                                if nearest < distance {
+                                    continue;
+                                }
+                            }
+
+                            let intersection = ray_inserect_circle(
+                                *food.pos(),
+                                FOOD_SIZE,
+                                *ant.pos(),
+                                ray_direction,
+                            );
+
+                            if let Some(intersection) = intersection {
+                                if let Some(nearest) = nearest_food {
+                                    if intersection < nearest {
+                                        nearest_food = Some(intersection)
+                                    }
+                                } else {
                                     nearest_food = Some(intersection)
                                 }
-                            } else {
-                                nearest_food = Some(intersection)
                             }
                         }
-                    }
+                    });
 
                     nearest_food.unwrap_or(-1.0)
                 })
