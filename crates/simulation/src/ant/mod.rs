@@ -25,13 +25,11 @@ pub struct Ant {
 }
 
 impl Ant {
-    pub fn random() -> Ant {
-        let mut rng = thread_rng();
-
+    pub fn from_direction(direction: f32) -> Ant {
         Ant {
             pos: vec2(0.0, 0.0),
-            dir: rng.gen_range(-(2. * PI)..(2. * PI)),
-            target_dir: rng.gen_range(-(2. * PI)..(2. * PI)),
+            dir: direction,
+            target_dir: direction,
             carries_food: false,
             pheromon_color: (0.0, 0.0, 0.0),
             rays: vec![0.; ANT_RAY_COUNT],

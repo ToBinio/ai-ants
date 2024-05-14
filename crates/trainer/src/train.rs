@@ -95,7 +95,7 @@ impl Trainer {
                 for (chance, network) in &network_chances {
                     if &random <= chance {
                         let mut neural_network = network.clone();
-                        neural_network.mutate(0.2, -0.5..0.5);
+                        neural_network.mutate();
                         new_simulations.push((Simulation::new(neural_network), 0));
 
                         continue 'outer;
