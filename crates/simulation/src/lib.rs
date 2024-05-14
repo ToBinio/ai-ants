@@ -1,5 +1,6 @@
 use crate::ant::{Ant, ANT_PICK_UP_DISTANCE};
 use crate::pheromone::Pheromone;
+use std::f32::consts::PI;
 
 use crate::food::Food;
 use crate::grid::Grid;
@@ -39,7 +40,10 @@ pub struct Simulation {
 
 impl Default for Simulation {
     fn default() -> Self {
-        Simulation::new(NeuralNetwork::new(Simulation::default_network_size()))
+        Simulation::new(NeuralNetwork::new(
+            NEURAL_NETWORK_INPUT_SIZE,
+            NEURAL_NETWORK_OUTPUT_SIZE,
+        ))
     }
 }
 
@@ -62,9 +66,6 @@ pub struct Timings {
 }
 
 impl Simulation {
-    pub fn default_network_size() -> Vec<usize> {
-        vec![NEURAL_NETWORK_INPUT_SIZE, 7, 5, NEURAL_NETWORK_OUTPUT_SIZE]
-    }
     pub fn new(neural_network: NeuralNetwork) -> Simulation {
         assert_eq!(
             neural_network.get_input_size(),
@@ -79,8 +80,11 @@ impl Simulation {
 
         let mut ants = vec![];
 
-        for _ in 0..200 {
-            ants.push(Ant::random());
+        const ANTS_TO_SPAWN: usize = 200;
+        const ANGLE_PER_ANT: f32 = PI * 2. / ANTS_TO_SPAWN as f32;
+
+        for i in 0..ANTS_TO_SPAWN {
+            ants.push(Ant::from_direction(ANGLE_PER_ANT * i as f32));
         }
 
         let mut foods = Grid::new(25, GAME_SIZE);
