@@ -21,9 +21,16 @@ struct Connection {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+struct SimpleConnection {
+    from: usize,
+    weight: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct Node {
     bias: f32,
     activation_function: ActivationFunction,
+    connections: Vec<SimpleConnection>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -40,6 +47,7 @@ impl NeuralNetwork {
             nodes.push(Node {
                 bias: 0.0,
                 activation_function: ActivationFunction::LINEAR,
+                connections: vec![],
             })
         }
 
@@ -63,8 +71,7 @@ impl NeuralNetwork {
             execution_order: vec![],
         };
 
-        let execution_order = network.build().unwrap();
-        network.execution_order = execution_order;
+        network.build();
 
         network
     }
@@ -78,26 +85,24 @@ impl NeuralNetwork {
     }
 
     pub fn run(&self, input: Vec<f32>) -> Vec<f32> {
-        let input_range = 0..self.inputs;
-        let mut node_vales = vec![];
+        let mut node_vales = Vec::with_capacity(self.nodes.len());
 
-        for _ in &self.nodes {
+        for value in input {
+            node_vales.push(value)
+        }
+
+        for _ in self.inputs..self.nodes.len() {
             node_vales.push(0.);
         }
 
-        for node_index in &self.execution_order {
+        for node_index in &self.execution_order[self.inputs..self.execution_order.len()] {
             let node = &self.nodes[*node_index];
 
-            let mut sum: f32 = self
+            let mut sum = node
                 .connections
                 .iter()
-                .filter(|connection| connection.to != *node_index)
                 .map(|connection| node_vales[connection.from] * connection.weight)
-                .sum();
-
-            if input_range.contains(node_index) {
-                sum = input[*node_index];
-            }
+                .sum::<f32>();
 
             sum += node.bias;
 
@@ -109,8 +114,9 @@ impl NeuralNetwork {
             node_vales[*node_index] = value;
         }
 
-        let mut outputs = vec![];
-        for output_index in self.inputs..(self.inputs + self.outputs) {
+        let mut outputs = Vec::with_capacity(self.outputs);
+
+        for output_index in (self.nodes.len() - self.outputs)..(self.nodes.len()) {
             outputs.push(node_vales[output_index])
         }
 
@@ -134,6 +140,7 @@ impl NeuralNetwork {
             self.nodes.push(Node {
                 bias: 0.0,
                 activation_function: ActivationFunction::SIGMOID,
+                connections: vec![],
             });
 
             let connection_index = rng.gen_range(0..self.connections.len());
@@ -147,7 +154,7 @@ impl NeuralNetwork {
                 weight: 1.0,
             });
 
-            self.execution_order = self.build().unwrap();
+            self.build();
         } else if mutation_type < 0.3 {
             //add new connection
 
@@ -174,7 +181,7 @@ impl NeuralNetwork {
                 weight: rng.gen_range(MUTATION_RANGE.clone()),
             });
 
-            self.execution_order = self.build().unwrap();
+            self.build()
         } else if mutation_type < 0.8 {
             //change values
 
@@ -193,7 +200,7 @@ impl NeuralNetwork {
         }
     }
 
-    fn build(&self) -> Option<Vec<usize>> {
+    fn build(&mut self) {
         let mut execution_order = vec![];
         let mut open_nodes: Vec<usize> = self
             .nodes
@@ -220,7 +227,7 @@ impl NeuralNetwork {
                 .collect();
 
             if nodes_to_close.is_empty() {
-                return None;
+                panic!("something went wrong while building network");
             }
 
             for node_index in nodes_to_close {
@@ -234,6 +241,20 @@ impl NeuralNetwork {
             }
         }
 
-        Some(execution_order)
+        self.execution_order = execution_order;
+
+        for (index, node) in self.nodes.iter_mut().enumerate() {
+            let connections = self
+                .connections
+                .iter()
+                .filter(|connection| connection.to != index)
+                .map(|connection| SimpleConnection {
+                    from: connection.from,
+                    weight: connection.weight,
+                })
+                .collect();
+
+            node.connections = connections;
+        }
     }
 }
