@@ -88,10 +88,9 @@ impl Ant {
     }
 
     pub fn get_ray_directions(&self) -> Vec<Vec2> {
-        let mut rays = vec![];
-
         let mut current_angle = (ANT_RAY_COUNT as f32 / 2.).floor() * -ANT_RAY_ANGLE;
 
+        let mut rays = Vec::with_capacity(ANT_RAY_COUNT);
         for _ in 0..ANT_RAY_COUNT {
             current_angle += ANT_RAY_ANGLE;
             rays.push(Vec2::from_angle(current_angle + self.dir))
