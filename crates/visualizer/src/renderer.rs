@@ -2,7 +2,7 @@ use crate::{RenderState, Timings};
 use ggez::glam::vec2;
 use ggez::graphics::{Canvas, Color, DrawParam, InstanceArray, Mesh, Text, TextFragment};
 use ggez::{graphics, Context, GameError, GameResult};
-use simulation::ant::ANT_SEE_DISTANCE;
+use simulation::ant::{Ant, ANT_SEE_DISTANCE};
 use simulation::{Simulation, ANT_HILL_RADIUS, FOOD_SIZE, GAME_SIZE};
 use std::f32::consts::PI;
 
@@ -106,24 +106,22 @@ impl Renderer {
     fn draw_ants(&self, simulation: &Simulation, canvas: &mut Canvas, ctx: &mut Context) {
         let mut instances = InstanceArray::new(&ctx.gfx, None);
 
-        for ant in simulation.ants() {
-            let angle = ant.dir();
-            let pos = ant.pos();
-
-            let color = if ant.carries_food() {
-                Color::GREEN
-            } else {
-                Color::BLACK
-            };
+        for ((pos, dir), carries) in simulation
+            .ants()
+            .positions
+            .iter()
+            .zip(simulation.ants().dirs.iter())
+            .zip(simulation.ants().caries_foods.iter())
+        {
+            let color = if *carries { Color::GREEN } else { Color::BLACK };
 
             instances.push(
                 DrawParam::new()
                     .dest(vec2(pos.x, pos.y))
-                    .rotation(angle)
+                    .rotation(*dir)
                     .color(color),
             );
         }
-
         canvas.draw_instanced_mesh(self.ant_mesh.clone(), &instances, DrawParam::new());
     }
 
@@ -142,8 +140,8 @@ impl Renderer {
             //todo extract to function
             let density = 5. / (scale * scale * PI);
 
-            let index_range =
-                simulation.ants().len() * index..simulation.ants().len() * (index + 1);
+            let index_range = simulation.ants().positions.len() * index
+                ..simulation.ants().positions.len() * (index + 1);
 
             for index in index_range {
                 let color = pheromones.colors[index];
@@ -176,10 +174,13 @@ impl Renderer {
     fn draw_rays(&self, simulation: &Simulation, canvas: &mut Canvas, ctx: &mut Context) {
         let mb = &mut graphics::MeshBuilder::new();
 
-        for ant in simulation.ants() {
-            let pos = ant.pos();
-
-            for direction in ant.get_ray_directions() {
+        for (pos, dir) in simulation
+            .ants()
+            .positions
+            .iter()
+            .zip(simulation.ants().dirs.iter())
+        {
+            for direction in Ant::get_ray_directions(*dir) {
                 let point = *pos + direction * ANT_SEE_DISTANCE;
 
                 mb.line(

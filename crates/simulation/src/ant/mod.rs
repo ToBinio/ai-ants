@@ -2,7 +2,7 @@ use crate::GAME_SIZE;
 use glam::{vec2, Vec2};
 use std::f32::consts::PI;
 
-const ANT_SPEED: f32 = 100.;
+pub const ANT_SPEED: f32 = 100.;
 pub const ANT_PICK_UP_DISTANCE: f32 = 10.;
 
 pub const ANT_RAY_COUNT: usize = 7;
@@ -85,13 +85,13 @@ impl Ant {
         self.rays = value;
     }
 
-    pub fn get_ray_directions(&self) -> Vec<Vec2> {
+    pub fn get_ray_directions(dir: f32) -> Vec<Vec2> {
         let mut current_angle = (ANT_RAY_COUNT as f32 / 2.).floor() * -ANT_RAY_ANGLE;
 
         let mut rays = Vec::with_capacity(ANT_RAY_COUNT);
         for _ in 0..ANT_RAY_COUNT {
             current_angle += ANT_RAY_ANGLE;
-            rays.push(Vec2::from_angle(current_angle + self.dir))
+            rays.push(Vec2::from_angle(current_angle + dir))
         }
 
         rays
