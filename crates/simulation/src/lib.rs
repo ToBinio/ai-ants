@@ -361,7 +361,7 @@ impl Simulation {
             pheromones.sizes.push(Some(1.));
 
             let len = ants.positions.len();
-            
+
             for index in 0..len {
                 pheromones.grid.insert(&ants.positions[index], len + index);
                 pheromones.positions.push(ants.positions[index]);
@@ -418,43 +418,44 @@ impl Simulation {
             let rays = &mut ants.rays[index];
             let pos = ants.positions[index];
             let dir = ants.dirs[index];
-            
-            Ant::get_ray_directions(dir)
-                .into_iter()
-                .map(|ray_direction| {
-                    let mut nearest_food = None;
 
-                    foods.for_each(pos, ANT_SEE_DISTANCE, |foods| {
-                        for food in foods {
-                            let distance = food.pos().distance_squared(pos);
+            let ray_directions = Ant::get_ray_directions(dir);
+            let mut nearest_foods = vec![None; rays.len()];
 
-                            if distance > ANT_SEE_DISTANCE {
+            foods.for_each(pos, ANT_SEE_DISTANCE, |foods| {
+                for (index, ray_direction) in ray_directions.iter().enumerate() {
+                    for food in &mut *foods {
+                        let distance = food.pos().distance_squared(pos);
+
+                        if distance > ANT_SEE_DISTANCE {
+                            continue;
+                        }
+
+                        if let Some(nearest) = nearest_foods[index] {
+                            if nearest < distance {
                                 continue;
                             }
+                        }
 
-                            if let Some(nearest) = nearest_food {
-                                if nearest < distance {
-                                    continue;
+                        let intersection =
+                            ray_inserect_circle(*food.pos(), FOOD_SIZE, pos, *ray_direction);
+
+                        if let Some(intersection) = intersection {
+                            if let Some(nearest) = nearest_foods[index] {
+                                if intersection < nearest {
+                                    nearest_foods[index] = Some(intersection)
                                 }
-                            }
-
-                            let intersection =
-                                ray_inserect_circle(*food.pos(), FOOD_SIZE, pos, ray_direction);
-
-                            if let Some(intersection) = intersection {
-                                if let Some(nearest) = nearest_food {
-                                    if intersection < nearest {
-                                        nearest_food = Some(intersection)
-                                    }
-                                } else {
-                                    nearest_food = Some(intersection)
-                                }
+                            } else {
+                                nearest_foods[index] = Some(intersection)
                             }
                         }
-                    });
+                    }
+                }
+            });
 
-                    nearest_food.unwrap_or(-1.0)
-                })
+            nearest_foods
+                .iter()
+                .map(|nearest_food| nearest_food.unwrap_or(-1.0))
                 .enumerate()
                 .for_each(|(index, value)| rays[index] = value);
         }
