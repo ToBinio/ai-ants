@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use crate::food::Food;
 use crate::grid::Grid;
 use ant::{ANT_RAY_COUNT, ANT_SEE_DISTANCE};
-use glam::vec2;
+use glam::{vec2, Vec2};
 use itertools::Itertools;
 use math::ray_inserect_circle;
 use neural_network::NeuralNetwork;
@@ -28,7 +28,8 @@ pub const NEURAL_NETWORK_OUTPUT_SIZE: usize = 4;
 
 pub struct Simulation {
     ants: Vec<Ant>,
-    pheromones: Grid<Pheromone>,
+
+    pheromones: Pheromones,
     foods: Grid<Food>,
 
     ticks_until_pheromone: usize,
@@ -38,6 +39,15 @@ pub struct Simulation {
     neural_network: NeuralNetwork,
 }
 
+pub struct Pheromones {
+    //todo dont all pub
+    pub grid: Grid<usize>,
+    pub positions: Vec<Vec2>,
+    pub colors: Vec<(f32, f32, f32)>,
+
+    // size per pheromone group, None marking a deleted section
+    pub sizes: Vec<Option<f32>>,
+}
 impl Default for Simulation {
     fn default() -> Self {
         Simulation::new(NeuralNetwork::new(
@@ -98,7 +108,12 @@ impl Simulation {
 
         Simulation {
             ants,
-            pheromones: Grid::new(25, GAME_SIZE),
+            pheromones: Pheromones {
+                grid: Grid::new(25, GAME_SIZE),
+                positions: vec![],
+                sizes: vec![],
+                colors: vec![],
+            },
             foods,
             ticks_until_pheromone: TICKS_UNTIL_PHEROMONE,
             timings: Timings {
@@ -128,8 +143,8 @@ impl Simulation {
         &self.ants
     }
 
-    pub fn pheromones(&self) -> Vec<&Pheromone> {
-        self.pheromones.all()
+    pub fn pheromones(&self) -> &Pheromones {
+        &self.pheromones
     }
     pub fn neural_network(&self) -> &NeuralNetwork {
         &self.neural_network
@@ -156,7 +171,7 @@ impl Simulation {
             self.ticks_until_pheromone -= 1;
         }
 
-        Simulation::update_pheromones(&mut self.pheromones, &mut self.timings);
+        Simulation::update_pheromones(&mut self.pheromones, self.ants.len(), &mut self.timings);
         Simulation::pick_up_food(
             &mut self.ants,
             &mut self.foods,
@@ -175,13 +190,40 @@ impl Simulation {
         timings.neural_network_updates = instant.elapsed();
     }
 
-    fn update_pheromones(pheromones: &mut Grid<Pheromone>, timings: &mut Timings) {
+    fn update_pheromones(pheromones: &mut Pheromones, ant_count: usize, timings: &mut Timings) {
         let instant = Instant::now();
-        pheromones.for_each_all(|pheromone| pheromone.step());
+
+        pheromones
+            .sizes
+            .iter_mut()
+            .filter(|size| size.is_some())
+            .for_each(|size| *size.as_mut().unwrap() *= 1.002);
+
         timings.pheromone_updates = instant.elapsed();
 
         let instant = Instant::now();
-        pheromones.retain(|pheromone| !pheromone.should_be_removed());
+
+        let to_be_removed = pheromones
+            .sizes
+            .iter()
+            .enumerate()
+            .filter(|(_, size)| size.is_some())
+            //todo extract density calc to function
+            .filter(|(_, size)| 5. / (size.unwrap() * size.unwrap() * PI) < 0.01)
+            .map(|(index, _)| index)
+            .next();
+
+        if let Some(to_be_removed) = to_be_removed {
+            //todo utility function - use while spawing and rendering
+            let index_range = ant_count * to_be_removed..ant_count * (to_be_removed + 1);
+
+            pheromones
+                .grid
+                .retain(|pheromone| !index_range.contains(pheromone));
+
+            pheromones.sizes[to_be_removed] = None;
+        }
+
         timings.pheromone_remove = instant.elapsed();
     }
 
@@ -219,12 +261,41 @@ impl Simulation {
         timings.keep_ants = instant.elapsed();
     }
 
-    fn spawn_pheromones(pheromones: &mut Grid<Pheromone>, ants: &Vec<Ant>, timings: &mut Timings) {
+    fn spawn_pheromones(pheromones: &mut Pheromones, ants: &Vec<Ant>, timings: &mut Timings) {
         let instant = Instant::now();
 
-        for ant in ants {
-            pheromones.insert(ant.pos(), ant.new_pheromone())
+        //todo dont dynamically build up - precompute needed size and use that...
+        // no need to handle sizes as optional than simple count on with index and overwrite than
+
+        let to_be_replaced = pheromones
+            .sizes
+            .iter()
+            .find_position(|value| value.is_none());
+
+        if to_be_replaced.is_some() {
+            let (to_be_replaced, _) = to_be_replaced.unwrap();
+
+            pheromones.sizes[to_be_replaced] = Some(1.);
+
+            let offset = ants.len() * to_be_replaced;
+
+            for (index, ant) in ants.iter().enumerate() {
+                pheromones.grid.insert(ant.pos(), index);
+                pheromones.positions[index + offset] = *ant.pos();
+                pheromones.colors[index + offset] = ant.pheromone_color();
+            }
+        } else {
+            pheromones.sizes.push(Some(1.));
+
+            for ant in ants {
+                let index = pheromones.positions.len();
+
+                pheromones.grid.insert(ant.pos(), index);
+                pheromones.positions.push(*ant.pos());
+                pheromones.colors.push(ant.pheromone_color());
+            }
         }
+
         timings.pheromone_spawn = instant.elapsed();
     }
 

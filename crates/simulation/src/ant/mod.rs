@@ -19,7 +19,7 @@ pub struct Ant {
 
     carries_food: bool,
 
-    pheromon_color: (f32, f32, f32),
+    pheromone_color: (f32, f32, f32),
 
     rays: Vec<f32>,
 }
@@ -31,7 +31,7 @@ impl Ant {
             dir: direction,
             target_dir: direction,
             carries_food: false,
-            pheromon_color: (0.0, 0.0, 0.0),
+            pheromone_color: (0.0, 0.0, 0.0),
             rays: vec![0.; ANT_RAY_COUNT],
         }
     }
@@ -64,7 +64,7 @@ impl Ant {
 
     pub fn set_neural_network_values(&mut self, values: Vec<f32>) {
         self.target_dir += values[0] / 100.;
-        self.pheromon_color = (values[1], values[2], values[3])
+        self.pheromone_color = (values[1], values[2], values[3])
     }
 
     pub fn get_neural_network_values(&self) -> Vec<f32> {
@@ -120,7 +120,7 @@ impl Ant {
         self.pos += Vec2::from_angle(self.dir) * mov_speed
     }
 
-    pub fn new_pheromone(&self) -> Pheromone {
-        Pheromone::new(self.pos, 5., self.pheromon_color)
+    pub fn pheromone_color(&self) -> (f32, f32, f32) {
+        self.pheromone_color.clone()
     }
 }

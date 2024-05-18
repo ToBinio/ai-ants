@@ -4,6 +4,7 @@ use ggez::graphics::{Canvas, Color, DrawParam, InstanceArray, Mesh, Text, TextFr
 use ggez::{graphics, Context, GameError, GameResult};
 use simulation::ant::ANT_SEE_DISTANCE;
 use simulation::{Simulation, ANT_HILL_RADIUS, FOOD_SIZE, GAME_SIZE};
+use std::f32::consts::PI;
 
 pub struct Renderer {
     ant_mesh: Mesh,
@@ -129,18 +130,32 @@ impl Renderer {
     fn draw_pheromones(&self, simulation: &Simulation, canvas: &mut Canvas, ctx: &mut Context) {
         let mut instances = InstanceArray::new(&ctx.gfx, None);
 
-        for pheromone in simulation.pheromones() {
-            let pos = pheromone.pos();
-            let scale = pheromone.size();
-            let color = pheromone.color();
-            let density = pheromone.density();
+        let pheromones = simulation.pheromones();
 
-            instances.push(
-                DrawParam::new()
-                    .dest(vec2(pos.x, pos.y))
-                    .scale(vec2(scale, scale))
-                    .color(Color::new(color.0, color.1, color.2, density)),
-            );
+        for (index, size) in pheromones
+            .sizes
+            .iter()
+            .enumerate()
+            .filter(|(_, size)| size.is_some())
+        {
+            let scale = size.unwrap();
+            //todo extract to function
+            let density = 5. / (scale * scale * PI);
+
+            let index_range =
+                simulation.ants().len() * index..simulation.ants().len() * (index + 1);
+
+            for index in index_range {
+                let color = pheromones.colors[index];
+                let pos = pheromones.positions[index];
+
+                instances.push(
+                    DrawParam::new()
+                        .dest(vec2(pos.x, pos.y))
+                        .scale(vec2(scale, scale))
+                        .color(Color::new(color.0, color.1, color.2, density)),
+                );
+            }
         }
 
         canvas.draw_instanced_mesh(self.pheromone_mesh.clone(), &instances, DrawParam::new());
