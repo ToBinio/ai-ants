@@ -206,7 +206,6 @@ impl Simulation {
             let carries_food = ants.caries_foods[index];
             let rays = &ants.rays[index];
 
-            //todo pre sized?
             let mut values = vec![
                 pos.x / GAME_SIZE,
                 pos.y / GAME_SIZE,
@@ -221,7 +220,7 @@ impl Simulation {
 
             let values = neural_network.run(values);
 
-            ants.target_dirs[index] = values[0] / 100.;
+            ants.target_dirs[index] += values[0] / 60.;
             ants.pheromone_colors[index] = (values[1], values[2], values[3]);
         }
 
