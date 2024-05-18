@@ -1,7 +1,5 @@
-use crate::pheromone::Pheromone;
 use crate::GAME_SIZE;
 use glam::{vec2, Vec2};
-use rand::{thread_rng, Rng};
 use std::f32::consts::PI;
 
 const ANT_SPEED: f32 = 100.;
@@ -121,6 +119,6 @@ impl Ant {
     }
 
     pub fn pheromone_color(&self) -> (f32, f32, f32) {
-        self.pheromone_color.clone()
+        self.pheromone_color
     }
 }

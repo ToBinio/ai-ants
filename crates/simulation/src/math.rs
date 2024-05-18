@@ -57,7 +57,7 @@ pub fn circle_intersects_rect(
 
     let corner_distance_sq = x * x + y * y;
 
-    return corner_distance_sq <= (circle_radius * circle_radius);
+    corner_distance_sq <= (circle_radius * circle_radius)
 }
 
 #[cfg(test)]

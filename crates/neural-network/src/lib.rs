@@ -35,8 +35,8 @@ struct Node {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum ActivationFunction {
-    LINEAR,
-    SIGMOID,
+    Linear,
+    Sigmoid,
 }
 
 impl NeuralNetwork {
@@ -46,7 +46,7 @@ impl NeuralNetwork {
         for _ in 0..(inputs + outputs) {
             nodes.push(Node {
                 bias: 0.0,
-                activation_function: ActivationFunction::LINEAR,
+                activation_function: ActivationFunction::Linear,
                 connections: vec![],
             })
         }
@@ -85,15 +85,8 @@ impl NeuralNetwork {
     }
 
     pub fn run(&self, input: Vec<f32>) -> Vec<f32> {
-        let mut node_vales = Vec::with_capacity(self.nodes.len());
-
-        for value in input {
-            node_vales.push(value)
-        }
-
-        for _ in self.inputs..self.nodes.len() {
-            node_vales.push(0.);
-        }
+        let mut node_vales = input;
+        node_vales.resize(self.nodes.len(), 0.);
 
         for node_index in &self.execution_order[self.inputs..self.execution_order.len()] {
             let node = &self.nodes[*node_index];
@@ -107,20 +100,15 @@ impl NeuralNetwork {
             sum += node.bias;
 
             let value = match node.activation_function {
-                ActivationFunction::LINEAR => sum,
-                ActivationFunction::SIGMOID => (1. / (1. + f32::exp(-sum))) * 2. - 1.,
+                ActivationFunction::Linear => sum,
+                ActivationFunction::Sigmoid => (1. / (1. + f32::exp(-sum))) * 2. - 1.,
             };
 
             node_vales[*node_index] = value;
         }
 
-        let mut outputs = Vec::with_capacity(self.outputs);
-
-        for output_index in (self.nodes.len() - self.outputs)..(self.nodes.len()) {
-            outputs.push(node_vales[output_index])
-        }
-
-        outputs
+        let outputs = &node_vales[(self.nodes.len() - self.outputs)..(self.nodes.len())];
+        Vec::from(outputs)
     }
 
     pub fn mutate(&mut self) {
@@ -139,7 +127,7 @@ impl NeuralNetwork {
             let new_node_index = self.nodes.len();
             self.nodes.push(Node {
                 bias: 0.0,
-                activation_function: ActivationFunction::SIGMOID,
+                activation_function: ActivationFunction::Sigmoid,
                 connections: vec![],
             });
 

@@ -1,22 +1,22 @@
 use crate::ant::{Ant, ANT_PICK_UP_DISTANCE};
-use crate::pheromone::Pheromone;
 use std::f32::consts::PI;
 
 use crate::food::Food;
 use crate::grid::Grid;
+use crate::timings::Timings;
 use ant::{ANT_RAY_COUNT, ANT_SEE_DISTANCE};
 use glam::{vec2, Vec2};
 use itertools::Itertools;
 use math::ray_inserect_circle;
 use neural_network::NeuralNetwork;
 use rand::{thread_rng, Rng};
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 pub mod ant;
 mod food;
 mod grid;
 mod math;
-mod pheromone;
+pub mod timings;
 
 const TICKS_UNTIL_PHEROMONE: usize = 10;
 pub const ANT_HILL_RADIUS: f32 = 50.;
@@ -61,18 +61,6 @@ pub struct Stats {
     pub step_count: usize,
     pub picked_up_food: usize,
     pub dropped_of_food: usize,
-}
-
-pub struct Timings {
-    pub ant_updates: Duration,
-    pub keep_ants: Duration,
-    pub neural_network_updates: Duration,
-    pub pheromone_updates: Duration,
-    pub pheromone_spawn: Duration,
-    pub pheromone_remove: Duration,
-    pub pick_up_food: Duration,
-    pub drop_of_food: Duration,
-    pub see_food: Duration,
 }
 
 impl Simulation {
@@ -187,7 +175,7 @@ impl Simulation {
             let values = neural_network.run(ant.get_neural_network_values());
             ant.set_neural_network_values(values);
         }
-        timings.neural_network_updates = instant.elapsed();
+        timings.neural_network_updates.add(&instant.elapsed());
     }
 
     fn update_pheromones(pheromones: &mut Pheromones, ant_count: usize, timings: &mut Timings) {
@@ -199,7 +187,7 @@ impl Simulation {
             .filter(|size| size.is_some())
             .for_each(|size| *size.as_mut().unwrap() *= 1.002);
 
-        timings.pheromone_updates = instant.elapsed();
+        timings.pheromone_updates.add(&instant.elapsed());
 
         let instant = Instant::now();
 
@@ -224,7 +212,7 @@ impl Simulation {
             pheromones.sizes[to_be_removed] = None;
         }
 
-        timings.pheromone_remove = instant.elapsed();
+        timings.pheromone_remove.add(&instant.elapsed());
     }
 
     fn update_ants(ants: &mut Vec<Ant>, timings: &mut Timings) {
@@ -232,7 +220,7 @@ impl Simulation {
         for ant in ants {
             ant.step()
         }
-        timings.ant_updates = instant.elapsed();
+        timings.ant_updates.add(&instant.elapsed());
     }
 
     fn keep_ants(ants: &mut Vec<Ant>, timings: &mut Timings) {
@@ -258,7 +246,7 @@ impl Simulation {
                 ant.flip()
             }
         }
-        timings.keep_ants = instant.elapsed();
+        timings.keep_ants.add(&instant.elapsed());
     }
 
     fn spawn_pheromones(pheromones: &mut Pheromones, ants: &Vec<Ant>, timings: &mut Timings) {
@@ -296,7 +284,7 @@ impl Simulation {
             }
         }
 
-        timings.pheromone_spawn = instant.elapsed();
+        timings.pheromone_spawn.add(&instant.elapsed());
     }
 
     fn pick_up_food(
@@ -328,7 +316,7 @@ impl Simulation {
             });
         }
 
-        timings.pick_up_food = instant.elapsed();
+        timings.pick_up_food.add(&instant.elapsed());
     }
 
     fn see_food(ants: &mut [Ant], foods: &mut Grid<Food>, timings: &mut Timings) {
@@ -381,7 +369,7 @@ impl Simulation {
             ant.set_rays(ray_values);
         }
 
-        timings.see_food = instant.elapsed();
+        timings.see_food.add(&instant.elapsed());
     }
 
     fn drop_of_food(ants: &mut [Ant], timings: &mut Timings, stats: &mut Stats) {
@@ -395,6 +383,6 @@ impl Simulation {
                 ant.set_carries_food(false)
             });
 
-        timings.drop_of_food = instant.elapsed();
+        timings.drop_of_food.add(&instant.elapsed());
     }
 }
