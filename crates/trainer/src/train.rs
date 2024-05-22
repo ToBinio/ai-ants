@@ -1,3 +1,5 @@
+use std::fmt::format;
+use std::io::Write;
 use std::{fs, io, time::Instant};
 
 use chrono::Local;
@@ -6,7 +8,7 @@ use fancy_duration::AsFancyDuration;
 use neural_network::NeuralNetwork;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use simulation::Simulation;
+use simulation::{Simulation, NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE};
 
 use crate::STEPS_PER_SIMULATION;
 
@@ -46,6 +48,8 @@ impl Trainer {
             }
 
             self.simulations.sort_by(|a, b| b.1.cmp(&a.1));
+            self.simulations
+                .dedup_by(|a, b| a.0.neural_network() == b.0.neural_network());
 
             Self::save_network(
                 gen_count,
@@ -72,7 +76,7 @@ impl Trainer {
             let top_30 = (self.simulation_count as f32 * 0.3).ceil() as usize;
 
             // keep top 30% as is
-            for i in 0..top_30 {
+            for i in 0..top_30.min(self.simulations.len()) {
                 new_simulations.push((
                     Simulation::new(self.simulations[i].0.neural_network().clone()),
                     0,
@@ -82,20 +86,22 @@ impl Trainer {
             let mut network_chances = vec![];
             let mut last_chance = 0;
 
-            for i in 0..self.simulation_count {
+            for i in 0..self.simulations.len() {
                 last_chance += self.simulations[i].1;
                 network_chances.push((last_chance, self.simulations[i].0.neural_network().clone()));
             }
 
             let mut rng = thread_rng();
 
-            'outer: for _ in top_30..self.simulation_count {
+            'outer: while new_simulations.len() != self.simulation_count {
                 let random = rng.gen_range(0..last_chance);
 
                 for (chance, network) in &network_chances {
                     if &random <= chance {
                         let mut neural_network = network.clone();
-                        neural_network.mutate();
+
+                        neural_network.mutate(0.4, 0.2);
+
                         new_simulations.push((Simulation::new(neural_network), 0));
 
                         continue 'outer;

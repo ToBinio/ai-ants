@@ -2,7 +2,7 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::ops::{Not, Range};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NeuralNetwork {
     inputs: usize,
     outputs: usize,
@@ -10,30 +10,32 @@ pub struct NeuralNetwork {
     nodes: Vec<Node>,
     connections: Vec<Connection>,
 
+    #[serde(skip)]
     execution_order: Vec<usize>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct Connection {
     from: usize,
     to: usize,
     weight: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct SimpleConnection {
     from: usize,
     weight: f32,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 struct Node {
     bias: f32,
     activation_function: ActivationFunction,
+    #[serde(skip)]
     connections: Vec<SimpleConnection>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 enum ActivationFunction {
     Linear,
     Sigmoid,
@@ -42,6 +44,8 @@ enum ActivationFunction {
 impl NeuralNetwork {
     pub fn new(inputs: usize, outputs: usize) -> NeuralNetwork {
         let mut nodes = vec![];
+
+        let mut rng = thread_rng();
 
         for _ in 0..(inputs + outputs) {
             nodes.push(Node {
@@ -58,7 +62,7 @@ impl NeuralNetwork {
                 connections.push(Connection {
                     from: input,
                     to: output,
-                    weight: 0.0,
+                    weight: rng.gen_range(-0.2..0.2) + rng.gen_range(-0.2..0.2),
                 })
             }
         }
@@ -107,18 +111,15 @@ impl NeuralNetwork {
             node_vales[*node_index] = value;
         }
 
-        let outputs = &node_vales[(self.nodes.len() - self.outputs)..(self.nodes.len())];
+        let outputs = &node_vales[self.inputs..(self.inputs + self.outputs)];
         Vec::from(outputs)
     }
 
-    pub fn mutate(&mut self) {
-        const MUTATION_CHANCE: f32 = 0.2;
-        const MUTATION_RANGE: Range<f32> = -0.5..0.5;
-
+    pub fn mutate(&mut self, weight_change_chance: f32, mutation_range: f32) {
         let mut rng = thread_rng();
         let mutation_type: f32 = rng.gen();
 
-        if mutation_type < 0.1 {
+        if mutation_type < 0.25 {
             //add new node
             if self.connections.is_empty() {
                 return;
@@ -139,11 +140,11 @@ impl NeuralNetwork {
             self.connections.push(Connection {
                 from: new_node_index,
                 to: old_to,
-                weight: 1.0,
+                weight: rng.gen_range(-0.5..5.0) + rng.gen_range(-0.5..5.0),
             });
 
             self.build();
-        } else if mutation_type < 0.3 {
+        } else if mutation_type < 0.5 {
             //add new connection
 
             let from_node = rng.gen_range(0..self.nodes.len());
@@ -157,16 +158,27 @@ impl NeuralNetwork {
             let input_range = 0..self.inputs;
             let output_range = self.inputs..(self.outputs + self.inputs);
 
-            //todo disallow existing connections
+            let to_node = self.execution_order[to_node];
+            let from_node = self.execution_order[from_node];
+
+            //disallow existing connections
+            if self
+                .connections
+                .iter()
+                .find(|connection| connection.to == to_node && connection.from == from_node)
+                .is_some()
+            {
+                return;
+            }
 
             if input_range.contains(&to_node) || output_range.contains(&from_node) {
                 return;
             }
 
             self.connections.push(Connection {
-                from: self.execution_order[from_node],
-                to: self.execution_order[to_node],
-                weight: rng.gen_range(MUTATION_RANGE.clone()),
+                from: from_node,
+                to: to_node,
+                weight: rng.gen_range(-0.5..5.0) + rng.gen_range(-0.5..5.0),
             });
 
             self.build()
@@ -174,21 +186,23 @@ impl NeuralNetwork {
             //change values
 
             for node in &mut self.nodes {
-                if rng.gen::<f32>() < MUTATION_CHANCE {
-                    node.bias +=
-                        rng.gen_range((MUTATION_RANGE.start / 2.0)..(MUTATION_RANGE.end / 2.0));
+                if rng.gen::<f32>() < weight_change_chance {
+                    node.bias += rng.gen_range((-mutation_range / 4.0)..(mutation_range / 4.0))
+                        + rng.gen_range((-mutation_range / 4.0)..(mutation_range / 4.0));
                 }
             }
 
             for connection in &mut self.connections {
-                if rng.gen::<f32>() < MUTATION_CHANCE {
-                    connection.weight += rng.gen_range(MUTATION_RANGE.clone());
+                if rng.gen::<f32>() < weight_change_chance {
+                    connection.weight += rng
+                        .gen_range((-mutation_range / 2.0)..(mutation_range / 2.0))
+                        + rng.gen_range((-mutation_range / 2.0)..(mutation_range / 2.0));
                 }
             }
         }
     }
 
-    fn build(&mut self) {
+    pub fn build(&mut self) {
         let mut execution_order = vec![];
         let mut open_nodes: Vec<usize> = self
             .nodes
@@ -235,7 +249,7 @@ impl NeuralNetwork {
             let connections = self
                 .connections
                 .iter()
-                .filter(|connection| connection.to != index)
+                .filter(|connection| connection.to == index)
                 .map(|connection| SimpleConnection {
                     from: connection.from,
                     weight: connection.weight,

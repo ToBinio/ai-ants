@@ -13,7 +13,7 @@ use ggez::{Context, ContextBuilder, GameError, GameResult};
 use neural_network::NeuralNetwork;
 use simulation::timings::avg_duration::AvgDuration;
 use simulation::{Simulation, NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE};
-use std::time::{Instant};
+use std::time::Instant;
 
 mod renderer;
 
@@ -28,7 +28,7 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
-    let neural_network = cli
+    let mut neural_network = cli
         .path
         .map(|path| {
             println!("{}", path);
@@ -40,13 +40,16 @@ fn main() {
         .or_else(|| {
             let mut network =
                 NeuralNetwork::new(NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE);
-            for _ in 0..20 {
-                network.mutate();
+
+            for _ in 0..50 {
+                network.mutate(0.1, 0.2);
             }
 
             Some(network)
         })
         .unwrap();
+
+    neural_network.build();
 
     let (mut ctx, event_loop) = ContextBuilder::new("ai ants", "ToBinio")
         .window_mode(WindowMode::default().resizable(true))

@@ -9,7 +9,6 @@ use glam::{vec2, Vec2};
 use itertools::Itertools;
 use math::ray_inserect_circle;
 use neural_network::NeuralNetwork;
-use rand::{thread_rng, Rng};
 use std::time::Instant;
 
 pub mod ant;
@@ -109,12 +108,12 @@ impl Simulation {
         }
 
         let mut foods = Grid::new(25, GAME_SIZE);
-        let mut rng = thread_rng();
 
-        for _ in 0..500 {
-            let pos = vec2(rng.gen_range(300.0..400.0), rng.gen_range(300.0..400.0));
-
-            foods.insert(&pos, Food::new(pos));
+        for x in 0..50 {
+            for y in 0..50 {
+                let pos = vec2(300. + x as f32 * 2., 300. + y as f32 * 2.);
+                foods.insert(&pos, Food::new(pos));
+            }
         }
 
         Simulation {
@@ -209,8 +208,8 @@ impl Simulation {
             let mut values = vec![
                 pos.x / GAME_SIZE,
                 pos.y / GAME_SIZE,
-                dir / PI * 2.,
-                target_dir / PI * 2.,
+                dir / (PI * 2.),
+                target_dir / (PI * 2.),
                 if carries_food { 1. } else { -1. },
             ];
 
@@ -220,7 +219,7 @@ impl Simulation {
 
             let values = neural_network.run(values);
 
-            ants.target_dirs[index] += values[0] / 60.;
+            ants.target_dirs[index] += values[0] / 120.;
             ants.pheromone_colors[index] = (values[1], values[2], values[3]);
         }
 
@@ -280,7 +279,7 @@ impl Simulation {
             dir %= PI * 2.;
 
             ants.dirs[index] = dir;
-            ants.target_dirs[index] = target_dir % PI * 2.;
+            ants.target_dirs[index] = target_dir % (PI * 2.);
 
             //move ant
             //calc how fast to move based on how strong the ant is turning
