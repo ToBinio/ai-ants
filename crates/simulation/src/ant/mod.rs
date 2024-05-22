@@ -1,10 +1,8 @@
-use crate::pheromone::Pheromone;
 use crate::GAME_SIZE;
 use glam::{vec2, Vec2};
-use rand::{thread_rng, Rng};
 use std::f32::consts::PI;
 
-const ANT_SPEED: f32 = 100.;
+pub const ANT_SPEED: f32 = 100.;
 pub const ANT_PICK_UP_DISTANCE: f32 = 10.;
 
 pub const ANT_RAY_COUNT: usize = 7;
@@ -19,7 +17,7 @@ pub struct Ant {
 
     carries_food: bool,
 
-    pheromon_color: (f32, f32, f32),
+    pheromone_color: (f32, f32, f32),
 
     rays: Vec<f32>,
 }
@@ -31,7 +29,7 @@ impl Ant {
             dir: direction,
             target_dir: direction,
             carries_food: false,
-            pheromon_color: (0.0, 0.0, 0.0),
+            pheromone_color: (0.0, 0.0, 0.0),
             rays: vec![0.; ANT_RAY_COUNT],
         }
     }
@@ -64,7 +62,7 @@ impl Ant {
 
     pub fn set_neural_network_values(&mut self, values: Vec<f32>) {
         self.target_dir += values[0] / 100.;
-        self.pheromon_color = (values[1], values[2], values[3])
+        self.pheromone_color = (values[1], values[2], values[3])
     }
 
     pub fn get_neural_network_values(&self) -> Vec<f32> {
@@ -87,13 +85,13 @@ impl Ant {
         self.rays = value;
     }
 
-    pub fn get_ray_directions(&self) -> Vec<Vec2> {
+    pub fn get_ray_directions(dir: f32) -> Vec<Vec2> {
         let mut current_angle = (ANT_RAY_COUNT as f32 / 2.).floor() * -ANT_RAY_ANGLE;
 
         let mut rays = Vec::with_capacity(ANT_RAY_COUNT);
         for _ in 0..ANT_RAY_COUNT {
             current_angle += ANT_RAY_ANGLE;
-            rays.push(Vec2::from_angle(current_angle + self.dir))
+            rays.push(Vec2::from_angle(current_angle + dir))
         }
 
         rays
@@ -120,7 +118,7 @@ impl Ant {
         self.pos += Vec2::from_angle(self.dir) * mov_speed
     }
 
-    pub fn new_pheromone(&self) -> Pheromone {
-        Pheromone::new(self.pos, 5., self.pheromon_color)
+    pub fn pheromone_color(&self) -> (f32, f32, f32) {
+        self.pheromone_color
     }
 }

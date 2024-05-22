@@ -11,8 +11,9 @@ use ggez::input::keyboard::KeyInput;
 use ggez::winit::event::VirtualKeyCode;
 use ggez::{Context, ContextBuilder, GameError, GameResult};
 use neural_network::NeuralNetwork;
+use simulation::timings::avg_duration::AvgDuration;
 use simulation::{Simulation, NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE};
-use std::time::{Duration, Instant};
+use std::time::{Instant};
 
 mod renderer;
 
@@ -69,8 +70,8 @@ struct SimulationVisualizer {
 }
 
 struct Timings {
-    render: Duration,
-    update: Duration,
+    render: AvgDuration,
+    update: AvgDuration,
 }
 
 struct RenderState {
@@ -108,7 +109,7 @@ impl EventHandler for SimulationVisualizer {
             self.simulation.step();
         }
 
-        self.timings.update = instant.elapsed();
+        self.timings.update.add(&instant.elapsed());
 
         Ok(())
     }
@@ -134,7 +135,7 @@ impl EventHandler for SimulationVisualizer {
         )?;
 
         canvas.finish(ctx)?;
-        self.timings.render = instant.elapsed();
+        self.timings.render.add(&instant.elapsed());
 
         Ok(())
     }

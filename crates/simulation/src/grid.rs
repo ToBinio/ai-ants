@@ -23,6 +23,8 @@ impl<T> Grid<T> {
         }
     }
 
+    // seemingly clippy bug
+    #[allow(clippy::redundant_closure)]
     pub fn for_each_all<F>(&mut self, f: F)
     where
         Self: Sized,
@@ -57,7 +59,7 @@ impl<T> Grid<T> {
 
                 let data = self.get_from_index_mut((x, y));
 
-                if data.len() == 0 {
+                if data.is_empty() {
                     continue;
                 }
 
