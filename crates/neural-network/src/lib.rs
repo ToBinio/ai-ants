@@ -39,6 +39,7 @@ pub struct Node {
 enum ActivationFunction {
     Linear,
     Sigmoid,
+    RELU,
 }
 
 impl NeuralNetwork {
@@ -106,6 +107,7 @@ impl NeuralNetwork {
             let value = match node.activation_function {
                 ActivationFunction::Linear => sum,
                 ActivationFunction::Sigmoid => (1. / (1. + f32::exp(-sum))) * 2. - 1.,
+                ActivationFunction::RELU => sum.max(0.),
             };
 
             node_vales[*node_index] = value;
@@ -128,7 +130,7 @@ impl NeuralNetwork {
             let new_node_index = self.nodes.len();
             self.nodes.push(Node {
                 bias: 0.0,
-                activation_function: ActivationFunction::Sigmoid,
+                activation_function: ActivationFunction::RELU,
                 connections: vec![],
             });
 
