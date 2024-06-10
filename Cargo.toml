@@ -1,8 +1,3 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/neural-network",
-    "crates/simulation",
-    "crates/trainer",
-    "crates/visualizer",
-]
+members = ["crates/*"]

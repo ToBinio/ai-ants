@@ -7,17 +7,17 @@ pub struct NeuralNetwork {
     inputs: usize,
     outputs: usize,
 
-    nodes: Vec<Node>,
-    connections: Vec<Connection>,
+    pub nodes: Vec<Node>,
+    pub connections: Vec<Connection>,
 
     #[serde(skip)]
     execution_order: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-struct Connection {
-    from: usize,
-    to: usize,
+pub struct Connection {
+    pub from: usize,
+    pub to: usize,
     weight: f32,
 }
 
@@ -28,7 +28,7 @@ struct SimpleConnection {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-struct Node {
+pub struct Node {
     bias: f32,
     activation_function: ActivationFunction,
     #[serde(skip)]
