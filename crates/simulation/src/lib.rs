@@ -209,7 +209,7 @@ impl Simulation {
 
             let values = neural_network.run(values);
 
-            ants.target_dirs[index] += values[0] / 120. * 0.;
+            ants.target_dirs[index] += values[0] / 120.;
             ants.pheromone_colors[index] = (values[1], values[2], values[3]);
         }
 
