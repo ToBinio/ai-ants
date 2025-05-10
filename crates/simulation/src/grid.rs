@@ -42,15 +42,13 @@ impl<T> Grid<T> {
     {
         let width_per_tile = (self.width * 2.) / self.size as f32;
 
-        let min_x =
-            (((pos.x - radius / 2.0 + self.width) / width_per_tile).floor() as usize).max(0);
-        let max_x = (((pos.x + radius / 2.0 + self.width) / width_per_tile).ceil() as usize)
-            .min(self.size - 1);
+        let min_x = (((pos.x - radius + self.width) / width_per_tile).floor() as usize).max(0);
+        let max_x =
+            (((pos.x + radius + self.width) / width_per_tile).ceil() as usize).min(self.size - 1);
 
-        let min_y =
-            (((pos.y - radius / 2.0 + self.width) / width_per_tile).floor() as usize).max(0);
-        let max_y = (((pos.y + radius / 2.0 + self.width) / width_per_tile).ceil() as usize)
-            .min(self.size - 1);
+        let min_y = (((pos.y - radius + self.width) / width_per_tile).floor() as usize).max(0);
+        let max_y =
+            (((pos.y + radius + self.width) / width_per_tile).ceil() as usize).min(self.size - 1);
 
         for x in min_x..=max_x {
             for y in min_y..=max_y {

@@ -416,8 +416,7 @@ impl Simulation {
 
                 for food in &mut *foods {
                     let distance = food.pos().distance_squared(pos);
-
-                    if distance > ANT_SEE_DISTANCE {
+                    if distance > ANT_SEE_DISTANCE * ANT_SEE_DISTANCE {
                         continue;
                     }
 
