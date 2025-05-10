@@ -2,7 +2,7 @@ use crate::{RenderState, Timings};
 use ggez::glam::vec2;
 use ggez::graphics::{Canvas, Color, DrawParam, InstanceArray, Mesh, Text, TextFragment};
 use ggez::{graphics, Context, GameError, GameResult};
-use simulation::ant::{Ant, ANT_SEE_DISTANCE};
+use simulation::ants::{Ants, ANT_SEE_DISTANCE};
 use simulation::{Simulation, ANT_HILL_RADIUS, FOOD_SIZE, GAME_SIZE};
 use std::f32::consts::PI;
 
@@ -180,7 +180,7 @@ impl Renderer {
             .iter()
             .zip(simulation.ants().dirs.iter())
         {
-            for direction in Ant::get_ray_directions(*dir) {
+            for direction in Ants::get_ray_directions(*dir) {
                 let point = *pos + direction * ANT_SEE_DISTANCE;
 
                 mb.line(

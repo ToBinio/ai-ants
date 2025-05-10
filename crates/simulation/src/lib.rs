@@ -1,21 +1,21 @@
-use crate::ant::{Ant, ANT_PICK_UP_DISTANCE};
-use std::f32::consts::PI;
+use std::{cell::OnceCell, f32::consts::PI};
 
 use crate::food::Food;
 use crate::grid::Grid;
 use crate::timings::Timings;
-use ant::{ANT_RAY_COUNT, ANT_SEE_DISTANCE};
+use ants::{Ants, ANT_PICK_UP_DISTANCE, ANT_RAY_COUNT, ANT_SEE_DISTANCE};
 use glam::{vec2, Vec2};
 use itertools::Itertools;
 use math::ray_inserect_circle;
 use neural_network::NeuralNetwork;
 use std::time::Instant;
 
-pub mod ant;
 mod food;
 mod grid;
 mod math;
 pub mod timings;
+
+pub mod ants;
 
 const TICKS_UNTIL_PHEROMONE: usize = 10;
 pub const ANT_HILL_RADIUS: f32 = 50.;
@@ -35,16 +35,6 @@ pub struct Simulation {
     stats: Stats,
 
     neural_network: NeuralNetwork,
-}
-
-pub struct Ants {
-    //todo dont all pub
-    pub positions: Vec<Vec2>,
-    pub dirs: Vec<f32>,
-    pub target_dirs: Vec<f32>,
-    pub caries_foods: Vec<bool>,
-    pub pheromone_colors: Vec<(f32, f32, f32)>,
-    pub rays: Vec<Vec<f32>>,
 }
 
 pub struct Pheromones {
@@ -219,7 +209,7 @@ impl Simulation {
 
             let values = neural_network.run(values);
 
-            ants.target_dirs[index] += values[0] / 120.;
+            ants.target_dirs[index] += values[0] / 120. * 0.;
             ants.pheromone_colors[index] = (values[1], values[2], values[3]);
         }
 
@@ -284,7 +274,7 @@ impl Simulation {
             //move ant
             //calc how fast to move based on how strong the ant is turning
             let mov_speed = 1. - angle_diff.abs() / (PI * 2.);
-            let mov_speed = crate::ant::ANT_SPEED * mov_speed;
+            let mov_speed = crate::ants::ANT_SPEED * mov_speed;
             // 60 = frame rate
             let mov_speed = mov_speed / 60.;
 
@@ -417,10 +407,13 @@ impl Simulation {
             let pos = ants.positions[index];
             let dir = ants.dirs[index];
 
-            let ray_directions = Ant::get_ray_directions(dir);
+            let ray_directions = OnceCell::new();
             let mut nearest_foods = vec![None; rays.len()];
 
             foods.for_each(pos, ANT_SEE_DISTANCE, |foods| {
+                let ray_directions =
+                    ray_directions.get_or_init(|| Ants::get_ray_directions(dir).collect_vec());
+
                 for (index, ray_direction) in ray_directions.iter().enumerate() {
                     for food in &mut *foods {
                         let distance = food.pos().distance_squared(pos);
