@@ -2,6 +2,7 @@ use crate::{RenderState, Timings};
 use ggez::glam::vec2;
 use ggez::graphics::{Canvas, Color, DrawParam, InstanceArray, Mesh, Text, TextFragment};
 use ggez::{graphics, Context, GameError, GameResult};
+use itertools::izip;
 use simulation::ants::{Ants, ANT_SEE_DISTANCE};
 use simulation::{Simulation, ANT_HILL_RADIUS, FOOD_SIZE, GAME_SIZE};
 use std::f32::consts::PI;
@@ -174,21 +175,21 @@ impl Renderer {
     fn draw_rays(&self, simulation: &Simulation, canvas: &mut Canvas, ctx: &mut Context) {
         let mb = &mut graphics::MeshBuilder::new();
 
-        for (pos, dir) in simulation
-            .ants()
-            .positions
-            .iter()
-            .zip(simulation.ants().dirs.iter())
-        {
-            for direction in Ants::get_ray_directions(*dir) {
+        for (pos, dir, rays) in izip!(
+            &simulation.ants().positions,
+            &simulation.ants().dirs,
+            &simulation.ants().rays
+        ) {
+            for (direction, ray) in izip!(Ants::get_ray_directions(*dir), rays) {
                 let point = *pos + direction * ANT_SEE_DISTANCE;
+                let color = if *ray == -1. {
+                    Color::YELLOW
+                } else {
+                    Color::GREEN
+                };
 
-                mb.line(
-                    &[vec2(pos.x, pos.y), vec2(point.x, point.y)],
-                    5.,
-                    Color::YELLOW,
-                )
-                .unwrap();
+                mb.line(&[vec2(pos.x, pos.y), vec2(point.x, point.y)], 5., color)
+                    .unwrap();
             }
         }
 
