@@ -3,7 +3,7 @@ use std::{cell::OnceCell, f32::consts::PI};
 use crate::food::Food;
 use crate::grid::Grid;
 use crate::timings::Timings;
-use ants::{Ants, ANT_PICK_UP_DISTANCE, ANT_RAY_COUNT, ANT_SEE_DISTANCE};
+use ants::{Ants, ANT_PICK_UP_DISTANCE, ANT_RAY_ANGLE, ANT_RAY_COUNT, ANT_SEE_DISTANCE};
 use glam::{vec2, Vec2};
 use itertools::Itertools;
 use math::ray_inserect_circle;
@@ -415,11 +415,15 @@ impl Simulation {
             let dir = ants.dirs[index];
 
             let ray_directions = OnceCell::new();
-            let mut nearest_foods = vec![None; rays.len()];
+            let mut nearest_foods = OnceCell::new();
 
             foods.for_each(pos, ANT_SEE_DISTANCE, |foods| {
                 let ray_directions =
                     ray_directions.get_or_init(|| Ants::get_ray_directions(dir).collect_vec());
+
+                // TODO - https://github.com/rust-lang/rust/issues/121641
+                nearest_foods.get_or_init(|| vec![None; rays.len()]);
+                let nearest_foods = nearest_foods.get_mut().unwrap();
 
                 for food in &mut *foods {
                     let distance = food.pos().distance_squared(pos);
@@ -450,11 +454,15 @@ impl Simulation {
                 }
             });
 
-            nearest_foods
-                .iter()
-                .map(|nearest_food| nearest_food.unwrap_or(-1.0))
-                .enumerate()
-                .for_each(|(index, value)| rays[index] = value);
+            if let Some(nearest_foods) = nearest_foods.get() {
+                nearest_foods
+                    .iter()
+                    .map(|nearest_food| nearest_food.unwrap_or(-1.0))
+                    .enumerate()
+                    .for_each(|(index, value)| rays[index] = value);
+            } else {
+                rays.fill(-1.);
+            }
         }
 
         timings.see_food.add(&instant.elapsed());

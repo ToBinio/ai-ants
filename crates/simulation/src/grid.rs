@@ -6,6 +6,10 @@ pub struct Grid<T> {
     data: Vec<Vec<T>>,
     size: usize,
     width: f32,
+
+    //precomputed
+    width_per_tile: f32,
+    tile_center_offset: f32,
 }
 
 impl<T> Grid<T> {
@@ -16,10 +20,14 @@ impl<T> Grid<T> {
             data.push(vec![]);
         }
 
+        let width_per_tile = (half_width * 2.) / size as f32;
+
         Grid {
             data,
             size,
             width: half_width,
+            width_per_tile,
+            tile_center_offset: width_per_tile / 2.0 - half_width,
         }
     }
 
@@ -40,26 +48,27 @@ impl<T> Grid<T> {
         Self: Sized,
         F: FnMut(&mut Vec<T>),
     {
-        let width_per_tile = (self.width * 2.) / self.size as f32;
+        let width_per_tile = self.width_per_tile;
 
-        let min_x = (((pos.x - radius + self.width) / width_per_tile).floor() as usize).max(0);
-        let max_x =
-            (((pos.x + radius + self.width) / width_per_tile).ceil() as usize).min(self.size - 1);
+        let pos_index = (pos + self.width) / width_per_tile;
+        let radius_offset = radius / width_per_tile;
 
-        let min_y = (((pos.y - radius + self.width) / width_per_tile).floor() as usize).max(0);
-        let max_y =
-            (((pos.y + radius + self.width) / width_per_tile).ceil() as usize).min(self.size - 1);
+        let min_x = ((pos_index.x - radius_offset).floor() as usize).max(0);
+        let max_x = ((pos_index.x + radius_offset).ceil() as usize).min(self.size - 1);
+
+        let min_y = ((pos_index.y - radius_offset).floor() as usize).max(0);
+        let max_y = ((pos_index.y + radius_offset).ceil() as usize).min(self.size - 1);
 
         for x in min_x..=max_x {
             for y in min_y..=max_y {
-                let tile_x = x as f32 * width_per_tile + width_per_tile / 2.0 - self.width;
-                let tile_y = y as f32 * width_per_tile + width_per_tile / 2.0 - self.width;
-
-                let data = self.get_from_index_mut((x, y));
+                let data = &mut self.data[y * self.size + x];
 
                 if data.is_empty() {
                     continue;
                 }
+
+                let tile_x = x as f32 * width_per_tile + self.tile_center_offset;
+                let tile_y = y as f32 * width_per_tile + self.tile_center_offset;
 
                 if circle_intersects_rect(pos, radius, vec2(tile_x, tile_y), width_per_tile) {
                     f(data);
@@ -86,11 +95,6 @@ impl<T> Grid<T> {
         let (x, y) = self.indexes_from_pos(pos);
 
         self.data.get_mut(y * self.size + x).unwrap().push(val);
-    }
-
-    #[inline]
-    pub fn get_from_index_mut(&mut self, indexes: (usize, usize)) -> &mut Vec<T> {
-        &mut self.data[indexes.1 * self.size + indexes.0]
     }
 
     pub fn indexes_from_pos(&self, pos: &Vec2) -> (usize, usize) {
