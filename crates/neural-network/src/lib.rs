@@ -44,9 +44,22 @@ enum ActivationFunction {
 
 impl NeuralNetwork {
     pub fn new(inputs: usize, outputs: usize) -> NeuralNetwork {
-        let mut nodes = vec![];
-
         let mut rng = thread_rng();
+        NeuralNetwork::with_weight(inputs, outputs, || {
+            rng.gen_range(-0.2..0.2) + rng.gen_range(-0.2..0.2)
+        })
+    }
+
+    pub fn zero(inputs: usize, outputs: usize) -> NeuralNetwork {
+        NeuralNetwork::with_weight(inputs, outputs, || 0.)
+    }
+
+    pub fn with_weight<F: FnMut() -> f32>(
+        inputs: usize,
+        outputs: usize,
+        mut weight_fn: F,
+    ) -> NeuralNetwork {
+        let mut nodes = vec![];
 
         for _ in 0..(inputs + outputs) {
             nodes.push(Node {
@@ -63,7 +76,7 @@ impl NeuralNetwork {
                 connections.push(Connection {
                     from: input,
                     to: output,
-                    weight: rng.gen_range(-0.2..0.2) + rng.gen_range(-0.2..0.2),
+                    weight: weight_fn(),
                 })
             }
         }

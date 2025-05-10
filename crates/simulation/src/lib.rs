@@ -62,6 +62,13 @@ pub struct Stats {
 }
 
 impl Simulation {
+    pub fn zero() -> Self {
+        Simulation::new(NeuralNetwork::zero(
+            NEURAL_NETWORK_INPUT_SIZE,
+            NEURAL_NETWORK_OUTPUT_SIZE,
+        ))
+    }
+
     pub fn new(neural_network: NeuralNetwork) -> Simulation {
         assert_eq!(
             neural_network.get_input_size(),

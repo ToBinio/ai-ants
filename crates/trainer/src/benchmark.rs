@@ -14,7 +14,7 @@ pub fn benchmark() -> io::Result<()> {
     const STEPS: usize = 50_000;
 
     for _ in 0..ITERATIONS {
-        let mut simulation = Simulation::default();
+        let mut simulation = Simulation::zero();
 
         let start_time = Instant::now();
 
