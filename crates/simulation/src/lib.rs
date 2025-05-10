@@ -414,14 +414,14 @@ impl Simulation {
                 let ray_directions =
                     ray_directions.get_or_init(|| Ants::get_ray_directions(dir).collect_vec());
 
-                for (index, ray_direction) in ray_directions.iter().enumerate() {
-                    for food in &mut *foods {
-                        let distance = food.pos().distance_squared(pos);
+                for food in &mut *foods {
+                    let distance = food.pos().distance_squared(pos);
 
-                        if distance > ANT_SEE_DISTANCE {
-                            continue;
-                        }
+                    if distance > ANT_SEE_DISTANCE {
+                        continue;
+                    }
 
+                    for (index, ray_direction) in ray_directions.iter().enumerate() {
                         if let Some(nearest) = nearest_foods[index] {
                             if nearest < distance {
                                 continue;
