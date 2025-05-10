@@ -7,20 +7,33 @@ pub fn benchmark() -> io::Result<()> {
     let term = Term::stdout();
     term.write_line("starting Benchmark!")?;
 
-    let mut simulation = Simulation::default();
+    let mut steps = 0;
+    let mut elapesed = 0.;
 
-    let start_time = Instant::now();
+    const ITERATIONS: usize = 10;
+    const STEPS: usize = 50_000;
 
-    for _ in 0..50_000 {
-        simulation.step();
+    for _ in 0..ITERATIONS {
+        let mut simulation = Simulation::default();
+
+        let start_time = Instant::now();
+
+        for _ in 0..STEPS {
+            simulation.step();
+        }
+
+        steps += simulation.stats().step_count;
+        elapesed += start_time.elapsed().as_secs_f32();
+
+        term.move_cursor_up(1)?;
+        term.clear_line()?;
+        term.write_line(&format!(
+            "steps: {}% in {} seconds {} steps/second",
+            steps / STEPS * ITERATIONS,
+            elapesed,
+            steps as f32 / elapesed
+        ))?;
     }
-
-    term.write_line(&format!(
-        "steps: {} in {} seconds {} steps/second",
-        simulation.stats().step_count,
-        start_time.elapsed().as_secs_f32(),
-        simulation.stats().step_count as f32 / start_time.elapsed().as_secs_f32()
-    ))?;
 
     Ok(())
 }
