@@ -156,6 +156,11 @@ impl Simulation {
     pub fn neural_network(&self) -> &NeuralNetwork {
         &self.neural_network
     }
+
+    pub fn neural_network_mut(&mut self) -> &mut NeuralNetwork {
+        &mut self.neural_network
+    }
+
     pub fn foods(&self) -> Vec<&Food> {
         self.foods.all()
     }

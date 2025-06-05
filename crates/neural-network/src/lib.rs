@@ -2,6 +2,10 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use std::ops::Not;
 
+use crate::math::{mean, stddev};
+
+mod math;
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NeuralNetwork {
     inputs: usize,
@@ -130,12 +134,78 @@ impl NeuralNetwork {
         Vec::from(outputs)
     }
 
-    pub fn mutate(&mut self, weight_change_chance: f32, mutation_range: f32) {
+    pub fn randomize_weights(&mut self, weight_change_chance: f32, mutation_range: f32) {
+        let mut rng = thread_rng();
+
+        for node in &mut self.nodes {
+            if rng.gen::<f32>() < weight_change_chance {
+                node.bias += rng.gen_range((-mutation_range / 4.0)..(mutation_range / 4.0))
+                    + rng.gen_range((-mutation_range / 4.0)..(mutation_range / 4.0));
+            }
+        }
+
+        for connection in &mut self.connections {
+            if rng.gen::<f32>() < weight_change_chance {
+                connection.weight += rng.gen_range((-mutation_range / 2.0)..(mutation_range / 2.0))
+                    + rng.gen_range((-mutation_range / 2.0)..(mutation_range / 2.0));
+            }
+        }
+    }
+
+    pub fn gradient_ascent(&mut self, learning_rate: f32, versions: Vec<(&NeuralNetwork, usize)>) {
+        let rewards: Vec<_> = versions.iter().map(|(_, reward)| *reward as f32).collect();
+
+        let reward_mean = mean(&rewards);
+        let mut reward_stddev = stddev(&rewards, reward_mean);
+
+        if reward_stddev == 0. {
+            reward_stddev = 1.;
+        }
+
+        //normalize reward
+        let versions: Vec<_> = versions
+            .into_iter()
+            .map(|(network, reward)| (network, (reward as f32 - reward_mean) / reward_stddev))
+            .collect();
+
+        // ascent weights
+        for connection_index in 0..self.connections.len() {
+            let connection = &mut self.connections[connection_index];
+
+            let mut gradient = 0.;
+
+            for (network, reward) in &versions {
+                let change = network.connections[connection_index].weight - connection.weight;
+                gradient += change * reward;
+            }
+
+            connection.weight += learning_rate * (gradient / versions.len() as f32)
+        }
+
+        // ascent biases
+        for node_index in 0..self.nodes.len() {
+            let node = &mut self.nodes[node_index];
+
+            let mut gradient = 0.;
+
+            for (network, reward) in &versions {
+                let change = network.nodes[node_index].bias - node.bias;
+
+                gradient += change * reward;
+            }
+
+            node.bias += learning_rate * (gradient / versions.len() as f32);
+        }
+
+        self.build();
+    }
+
+    pub fn mutate_strucutre(&mut self) {
         let mut rng = thread_rng();
         let mutation_type: f32 = rng.gen();
 
         if mutation_type < 0.25 {
-            //add new node
+            //add new node between old connection
             if self.connections.is_empty() {
                 return;
             }
@@ -159,9 +229,8 @@ impl NeuralNetwork {
             });
 
             self.build();
-        } else if mutation_type < 0.5 {
+        } else {
             //add new connection
-
             let from_node = rng.gen_range(0..self.nodes.len());
 
             if (from_node + 1) == self.nodes.len() {
@@ -196,23 +265,6 @@ impl NeuralNetwork {
             });
 
             self.build()
-        } else if mutation_type < 0.8 {
-            //change values
-
-            for node in &mut self.nodes {
-                if rng.gen::<f32>() < weight_change_chance {
-                    node.bias += rng.gen_range((-mutation_range / 4.0)..(mutation_range / 4.0))
-                        + rng.gen_range((-mutation_range / 4.0)..(mutation_range / 4.0));
-                }
-            }
-
-            for connection in &mut self.connections {
-                if rng.gen::<f32>() < weight_change_chance {
-                    connection.weight += rng
-                        .gen_range((-mutation_range / 2.0)..(mutation_range / 2.0))
-                        + rng.gen_range((-mutation_range / 2.0)..(mutation_range / 2.0));
-                }
-            }
         }
     }
 

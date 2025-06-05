@@ -42,7 +42,7 @@ fn main() {
                 NeuralNetwork::new(NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE);
 
             for _ in 0..50 {
-                network.mutate(0.1, 0.2);
+                network.mutate_strucutre();
             }
 
             Some(network)

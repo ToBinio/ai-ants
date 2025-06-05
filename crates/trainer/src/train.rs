@@ -3,6 +3,7 @@ use std::{fs, io, time::Instant};
 use chrono::Local;
 use console::Term;
 use fancy_duration::AsFancyDuration;
+use itertools::Itertools;
 use neural_network::NeuralNetwork;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
@@ -11,21 +12,31 @@ use simulation::Simulation;
 use crate::STEPS_PER_SIMULATION;
 
 pub struct Trainer {
-    simulations: Vec<(Simulation, usize)>,
+    simulations: Vec<SimulationData>,
     simulation_count: usize,
+    perturbed_count: usize,
+}
+
+struct SimulationData {
+    base: Simulation,
+    perturbed: Vec<Simulation>,
+    reward: usize,
 }
 
 impl Trainer {
-    pub fn new(simulation_count: usize) -> Trainer {
-        let mut simulations = vec![];
-
-        for _ in 0..simulation_count {
-            simulations.push((Simulation::default(), 0))
-        }
+    pub fn new(simulation_count: usize, perturbed_count: usize) -> Trainer {
+        let simulations = (0..simulation_count)
+            .map(|_| SimulationData {
+                base: Simulation::default(),
+                perturbed: vec![],
+                reward: 0,
+            })
+            .collect_vec();
 
         Trainer {
             simulations,
             simulation_count,
+            perturbed_count,
         }
     }
 
@@ -39,30 +50,73 @@ impl Trainer {
 
         loop {
             gen_count += 1;
-            self.run();
 
-            for sim in &mut self.simulations {
-                sim.1 = Self::eval(&sim.0)
+            //gradient ascent
+            for _ in 0..5 {
+                //create pertubed
+                for data in &mut self.simulations {
+                    data.perturbed = (0..self.perturbed_count)
+                        .map(|_| {
+                            let mut network = data.base.neural_network().clone();
+                            network.randomize_weights(0.5, 0.1);
+                            Simulation::new(network)
+                        })
+                        .collect_vec();
+                }
+
+                //run perturbed networks
+                Self::run(
+                    self.simulations
+                        .iter_mut()
+                        .map(|data| &mut data.perturbed)
+                        .flat_map(|permuted| permuted)
+                        .collect(),
+                );
+
+                //gradient ascent
+                for data in &mut self.simulations {
+                    let perturbed = data
+                        .perturbed
+                        .iter()
+                        .map(|simulation| (simulation.neural_network(), Self::eval(simulation)))
+                        .collect_vec();
+
+                    data.base
+                        .neural_network_mut()
+                        .gradient_ascent(0.1, perturbed);
+                }
             }
 
-            self.simulations.sort_by(|a, b| b.1.cmp(&a.1));
+            // run base simulations
+            Self::run(
+                self.simulations
+                    .iter_mut()
+                    .map(|data| &mut data.base)
+                    .collect(),
+            );
+
+            for sim in &mut self.simulations {
+                sim.reward = Self::eval(&sim.base)
+            }
+
+            self.simulations.sort_by(|a, b| b.reward.cmp(&a.reward));
             self.simulations
-                .dedup_by(|a, b| a.0.neural_network() == b.0.neural_network());
+                .dedup_by(|a, b| a.base.neural_network() == b.base.neural_network());
 
             Self::save_network(
                 gen_count,
-                self.simulations[0].1,
-                self.simulations[0].0.neural_network(),
+                self.simulations[0].reward,
+                self.simulations[0].base.neural_network(),
             );
 
             term.clear_line()?;
             term.write_line(&format!(
                 "gen({}) score: {} avg({}) - {}",
                 gen_count,
-                self.simulations[0].1,
+                self.simulations[0].reward,
                 self.simulations
                     .iter()
-                    .map(|(_, score)| *score)
+                    .map(|data| data.reward)
                     .sum::<usize>()
                     / self.simulations.len(),
                 start_time.elapsed().fancy_duration().truncate(2)
@@ -75,18 +129,22 @@ impl Trainer {
 
             // keep top 30% as is
             for i in 0..top_30.min(self.simulations.len()) {
-                new_simulations.push((
-                    Simulation::new(self.simulations[i].0.neural_network().clone()),
-                    0,
-                ));
+                new_simulations.push(SimulationData {
+                    base: Simulation::new(self.simulations[i].base.neural_network().clone()),
+                    perturbed: vec![],
+                    reward: 0,
+                });
             }
 
             let mut network_chances = vec![];
-            let mut last_chance = 0;
+            let mut last_chance = 1;
 
             for i in 0..self.simulations.len() {
-                last_chance += self.simulations[i].1;
-                network_chances.push((last_chance, self.simulations[i].0.neural_network().clone()));
+                last_chance += self.simulations[i].reward;
+                network_chances.push((
+                    last_chance,
+                    self.simulations[i].base.neural_network().clone(),
+                ));
             }
 
             let mut rng = thread_rng();
@@ -98,11 +156,15 @@ impl Trainer {
                     if &random <= chance {
                         let mut neural_network = network.clone();
 
-                        for _ in 0..10 {
-                            neural_network.mutate(0.4, 0.2);
+                        for _ in 0..1 {
+                            neural_network.mutate_strucutre();
                         }
 
-                        new_simulations.push((Simulation::new(neural_network), 0));
+                        new_simulations.push(SimulationData {
+                            base: Simulation::new(neural_network),
+                            perturbed: vec![],
+                            reward: 0,
+                        });
 
                         continue 'outer;
                     }
@@ -113,10 +175,10 @@ impl Trainer {
         }
     }
 
-    fn run(&mut self) {
-        self.simulations.par_iter_mut().for_each(|simulation| {
+    fn run(networks: Vec<&mut Simulation>) {
+        networks.into_par_iter().for_each(|simulation| {
             for _ in 0..STEPS_PER_SIMULATION {
-                simulation.0.step();
+                simulation.step();
             }
         });
     }
