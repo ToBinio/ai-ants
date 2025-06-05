@@ -1,6 +1,6 @@
 use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
-use std::ops::{Not, Range};
+use std::ops::Not;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NeuralNetwork {
@@ -39,7 +39,7 @@ pub struct Node {
 enum ActivationFunction {
     Linear,
     Sigmoid,
-    RELU,
+    Relu,
 }
 
 impl NeuralNetwork {
@@ -120,7 +120,7 @@ impl NeuralNetwork {
             let value = match node.activation_function {
                 ActivationFunction::Linear => sum,
                 ActivationFunction::Sigmoid => (1. / (1. + f32::exp(-sum))) * 2. - 1.,
-                ActivationFunction::RELU => sum.max(0.),
+                ActivationFunction::Relu => sum.max(0.),
             };
 
             node_vales[*node_index] = value;
@@ -143,7 +143,7 @@ impl NeuralNetwork {
             let new_node_index = self.nodes.len();
             self.nodes.push(Node {
                 bias: 0.0,
-                activation_function: ActivationFunction::RELU,
+                activation_function: ActivationFunction::Relu,
                 connections: vec![],
             });
 
@@ -180,8 +180,7 @@ impl NeuralNetwork {
             if self
                 .connections
                 .iter()
-                .find(|connection| connection.to == to_node && connection.from == from_node)
-                .is_some()
+                .any(|connection| connection.to == to_node && connection.from == from_node)
             {
                 return;
             }

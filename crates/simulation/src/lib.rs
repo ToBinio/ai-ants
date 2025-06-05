@@ -3,7 +3,7 @@ use std::{cell::OnceCell, f32::consts::PI};
 use crate::food::Food;
 use crate::grid::Grid;
 use crate::timings::Timings;
-use ants::{Ants, ANT_PICK_UP_DISTANCE, ANT_RAY_ANGLE, ANT_RAY_COUNT, ANT_SEE_DISTANCE};
+use ants::{Ants, ANT_PICK_UP_DISTANCE, ANT_RAY_COUNT, ANT_SEE_DISTANCE};
 use glam::{vec2, Vec2};
 use itertools::Itertools;
 use math::ray_inserect_circle;

@@ -1,5 +1,3 @@
-use std::fmt::format;
-use std::io::Write;
 use std::{fs, io, time::Instant};
 
 use chrono::Local;
@@ -8,7 +6,7 @@ use fancy_duration::AsFancyDuration;
 use neural_network::NeuralNetwork;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
-use simulation::{Simulation, NEURAL_NETWORK_INPUT_SIZE, NEURAL_NETWORK_OUTPUT_SIZE};
+use simulation::Simulation;
 
 use crate::STEPS_PER_SIMULATION;
 

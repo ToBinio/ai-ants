@@ -1,4 +1,3 @@
-use clap::builder::TypedValueParser;
 use clap::Parser;
 use neural_network::NeuralNetwork;
 use std::collections::HashMap;
@@ -49,7 +48,7 @@ fn main() {
                     }
                 }
 
-                return true;
+                true
             })
             .map(|(index, _)| index)
             .collect();
@@ -62,17 +61,19 @@ fn main() {
     }
 
     //set output always to last layer
-    for i in neural_network.get_input_size()
-        ..(neural_network.get_input_size() + neural_network.get_output_size())
+    for depth in depths
+        .iter_mut()
+        .skip(neural_network.get_input_size())
+        .take(neural_network.get_output_size())
     {
-        depths[i] = Some(current_depth - 1);
+        *depth = Some(current_depth - 1);
     }
 
     let mut node_position = vec![];
     let mut depth_counts: HashMap<usize, usize> = HashMap::new();
 
-    for i in 0..node_count {
-        let depth = depths[i].unwrap();
+    for depth in depths.iter() {
+        let depth = depth.unwrap();
         let depth_count = depth_counts.get(&depth).unwrap_or(&0);
 
         node_position.push(((depth + 1) * 75, (depth_count + 1) * 75));
