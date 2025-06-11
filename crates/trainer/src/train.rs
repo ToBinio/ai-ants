@@ -3,7 +3,8 @@ use std::{fs, io, time::Instant};
 use chrono::Local;
 use console::Term;
 use fancy_duration::AsFancyDuration;
-use itertools::Itertools;
+use glam::vec2;
+use itertools::{izip, Itertools};
 use neural_network::NeuralNetwork;
 use rand::{thread_rng, Rng};
 use rayon::prelude::*;
@@ -20,7 +21,7 @@ pub struct Trainer {
 struct SimulationData {
     base: Simulation,
     perturbed: Vec<Simulation>,
-    reward: usize,
+    reward: f32,
 }
 
 impl Trainer {
@@ -29,7 +30,7 @@ impl Trainer {
             .map(|_| SimulationData {
                 base: Simulation::default(),
                 perturbed: vec![],
-                reward: 0,
+                reward: 0.,
             })
             .collect_vec();
 
@@ -58,7 +59,7 @@ impl Trainer {
                     data.perturbed = (0..self.perturbed_count)
                         .map(|_| {
                             let mut network = data.base.neural_network().clone();
-                            network.randomize_weights(0.5, 0.1);
+                            network.randomize_weights(0.05, 1.);
                             Simulation::new(network)
                         })
                         .collect_vec();
@@ -83,7 +84,7 @@ impl Trainer {
 
                     data.base
                         .neural_network_mut()
-                        .gradient_ascent(0.1, perturbed);
+                        .gradient_ascent(0.5, perturbed);
                 }
             }
 
@@ -99,7 +100,8 @@ impl Trainer {
                 sim.reward = Self::eval(&sim.base)
             }
 
-            self.simulations.sort_by(|a, b| b.reward.cmp(&a.reward));
+            self.simulations
+                .sort_by(|a, b| b.reward.total_cmp(&a.reward));
             self.simulations
                 .dedup_by(|a, b| a.base.neural_network() == b.base.neural_network());
 
@@ -114,11 +116,8 @@ impl Trainer {
                 "gen({}) score: {} avg({}) - {}",
                 gen_count,
                 self.simulations[0].reward,
-                self.simulations
-                    .iter()
-                    .map(|data| data.reward)
-                    .sum::<usize>()
-                    / self.simulations.len(),
+                self.simulations.iter().map(|data| data.reward).sum::<f32>()
+                    / self.simulations.len() as f32,
                 start_time.elapsed().fancy_duration().truncate(2)
             ))?;
             term.move_cursor_up(1)?;
@@ -132,12 +131,12 @@ impl Trainer {
                 new_simulations.push(SimulationData {
                     base: Simulation::new(self.simulations[i].base.neural_network().clone()),
                     perturbed: vec![],
-                    reward: 0,
+                    reward: 0.,
                 });
             }
 
             let mut network_chances = vec![];
-            let mut last_chance = 1;
+            let mut last_chance = 1.;
 
             for i in 0..self.simulations.len() {
                 last_chance += self.simulations[i].reward;
@@ -150,20 +149,21 @@ impl Trainer {
             let mut rng = thread_rng();
 
             'outer: while new_simulations.len() != self.simulation_count {
-                let random = rng.gen_range(0..last_chance);
+                let random = rng.gen_range(0. ..last_chance);
 
                 for (chance, network) in &network_chances {
                     if &random <= chance {
                         let mut neural_network = network.clone();
 
-                        for _ in 0..1 {
+                        for _ in 0..rng.gen_range(0..5) {
                             neural_network.mutate_strucutre();
                         }
+                        neural_network.randomize_weights(0.2, 0.5);
 
                         new_simulations.push(SimulationData {
                             base: Simulation::new(neural_network),
                             perturbed: vec![],
-                            reward: 0,
+                            reward: 0.,
                         });
 
                         continue 'outer;
@@ -183,11 +183,27 @@ impl Trainer {
         });
     }
 
-    fn eval(simulation: &Simulation) -> usize {
-        simulation.stats().dropped_of_food * 5 + simulation.stats().picked_up_food
+    fn eval(simulation: &Simulation) -> f32 {
+        let mut score = 0.;
+
+        for (carries, position) in izip!(
+            &simulation.ants().caries_foods,
+            &simulation.ants().positions
+        ) {
+            if *carries {
+                score += 1. - (position.distance(vec2(0., 0.)) / 1000.);
+            } else {
+                score += 1. - (position.distance(vec2(325., 325.)) / 1000.);
+            }
+        }
+
+        score += simulation.stats().dropped_of_food as f32 * 5.
+            + simulation.stats().picked_up_food as f32;
+
+        score
     }
 
-    fn save_network(gen: usize, score: usize, best_network: &NeuralNetwork) {
+    fn save_network(gen: usize, score: f32, best_network: &NeuralNetwork) {
         let path_string = format!(
             "./training/{}-{}-{}.json",
             gen,

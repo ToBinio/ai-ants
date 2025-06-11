@@ -29,7 +29,7 @@ fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Learn { count } => Trainer::new(count, 25).train().unwrap(),
+        Commands::Learn { count } => Trainer::new(count, 10).train().unwrap(),
         Commands::Benchmark => benchmark().unwrap(),
     }
 }

@@ -150,10 +150,12 @@ impl NeuralNetwork {
                     + rng.gen_range((-mutation_range / 2.0)..(mutation_range / 2.0));
             }
         }
+
+        self.build();
     }
 
-    pub fn gradient_ascent(&mut self, learning_rate: f32, versions: Vec<(&NeuralNetwork, usize)>) {
-        let rewards: Vec<_> = versions.iter().map(|(_, reward)| *reward as f32).collect();
+    pub fn gradient_ascent(&mut self, learning_rate: f32, versions: Vec<(&NeuralNetwork, f32)>) {
+        let rewards: Vec<_> = versions.iter().map(|(_, reward)| *reward).collect();
 
         let reward_mean = mean(&rewards);
         let mut reward_stddev = stddev(&rewards, reward_mean);

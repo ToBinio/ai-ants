@@ -76,7 +76,7 @@ fn main() {
         let depth = depth.unwrap();
         let depth_count = depth_counts.get(&depth).unwrap_or(&0);
 
-        node_position.push(((depth + 1) * 75, (depth_count + 1) * 75));
+        node_position.push(((depth + 1) * 150, (depth_count + 1) * 75));
 
         depth_counts.insert(depth, depth_count + 1);
     }
@@ -105,7 +105,7 @@ fn main() {
 
     svg = svg.set(
         "viewBox",
-        (0, 0, (node_count + 1) * 75, (node_count + 1) * 75),
+        (0, 0, (node_count + 1) * 150, (node_count + 1) * 75),
     );
 
     svg::save("test.svg", &svg).unwrap()
